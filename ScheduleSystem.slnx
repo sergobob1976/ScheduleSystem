@@ -1,0 +1,11 @@
+<Solution>
+  <Project Path="Schedule.Api/Schedule.Api.csproj" Id="923151cb-8d53-44bd-9e90-d411ea8f3b43" />
+  <Project Path="Schedule.Application/Schedule.Application.csproj" Id="6c561d26-18cc-401d-860b-1494a1d853b4" />
+  <Project Path="Schedule.Contracts/Schedule.Contracts.csproj" Id="100c9e88-46ee-4fca-8350-fdb9196231c1" />
+  <Project Path="Schedule.Core/Schedule.Core.csproj" Id="5125cf0a-87d3-4e74-81ab-26bc315d6b09" />
+  <Project Path="Schedule.Infrastructure/Schedule.Infrastructure.csproj" Id="f5536954-8f5f-491e-a475-3bef3ff7bd6a" />
+  <Project Path="Schedule.Maui/Schedule.Maui.csproj" Id="abd3f6d2-d814-46d8-a83c-04bec5083257">
+    <Deploy Solution="Debug|*" />
+  </Project>
+  <Project Path="Schedule.Web/Schedule.Web.csproj" Id="e593efe4-aa6f-4230-a8f6-6d52de4d36b6" />
+</Solution>
