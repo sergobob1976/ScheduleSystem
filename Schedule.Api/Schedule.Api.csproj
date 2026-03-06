@@ -10,4 +10,10 @@
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Schedule.Application\Schedule.Application.csproj" />
+    <ProjectReference Include="..\Schedule.Contracts\Schedule.Contracts.csproj" />
+    <ProjectReference Include="..\Schedule.Infrastructure\Schedule.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
