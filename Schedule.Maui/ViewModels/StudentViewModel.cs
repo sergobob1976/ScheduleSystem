@@ -123,27 +123,25 @@ namespace Schedule.Maui.ViewModels
             IsBusy = true;
             try
             {
-                var db = await _databaseService.GetConnectionAsync();
-
                 // 1. Завантаження груп
-                var groupsFromDb = await _databaseService.GetGroupsAsync();
+                var groupsFromDb = _databaseService.GetGroups();
                 Groups.Clear();
                 foreach (var g in groupsFromDb) Groups.Add(g.GroupName);
 
-                // 2. Завантаження вчителів
-                var teachersFromDb = await db.Table<Teacher>().ToListAsync();
+                // 2. Завантаження вчителів (викликаємо GetTeachers із нашого нового сервісу)
+                var teachersFromDb = _databaseService.GetTeachers();
                 Teachers.Clear();
                 Teachers.Add(string.Empty);
                 foreach (var t in teachersFromDb) Teachers.Add(t.TeacherName);
 
-                // 3. Завантаження аудиторій
-                var roomsFromDb = await db.Table<ClassRoom>().ToListAsync();
+                // 3. Завантаження аудиторій (викликаємо GetClassRooms)
+                var roomsFromDb = _databaseService.GetClassRooms();
                 ClassRooms.Clear();
                 ClassRooms.Add(string.Empty);
                 foreach (var r in roomsFromDb) ClassRooms.Add(r.ClassRoomName);
 
-                // 4. Завантаження занять
-                _allLessonsFromDb = await db.Table<RealLesson>().ToListAsync();
+                // 4. Завантаження занять (викликаємо GetRealLessons)
+                _allLessonsFromDb = _databaseService.GetRealLessons();
 
                 // 5. Відновлення налаштувань (Тільки група та вчитель)
                 var savedGroup = Preferences.Default.Get(SelectedGroupKey, string.Empty);

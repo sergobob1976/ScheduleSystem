@@ -12,6 +12,7 @@ namespace Schedule.Core.Models
         public string Message { get; set; } = "Вітаємо у розкладі!";
         public UserRole Role { get; set; } = UserRole.Guest;
         public bool IsLoggedIn { get; set; } = false;
+        public string Password { get; set; } = string.Empty;
     }
 }
 

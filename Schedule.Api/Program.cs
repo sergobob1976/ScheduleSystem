@@ -1,17 +1,24 @@
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// 1. Додаємо сервіси Swashbuckle Swagger для генерації документації
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
+// Додаємо підтримку контролерів (знадобиться для твоїх майбутніх API-ендпоінтів)
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// 2. Налаштовуємо HTTP-пайплайн
+// Включаємо сторінку Swagger у браузері лише для локальної розробки (Development)
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        // Налаштовуємо Swagger UI на корінь сайту (не обов'язково, але зручно)
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Schedule API v1");
+    });
 }
 
 app.UseHttpsRedirection();
