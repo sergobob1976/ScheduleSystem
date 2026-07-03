@@ -12,9 +12,10 @@ namespace Schedule.Maui.Services
         public DatabaseService()
         {
             // Шлях до бази у внутрішній пам'яті телефону/ПК
-            _dbPath = Path.Combine(FileSystem.AppDataDirectory, "SchedData.db");
+            _dbPath = Path.Combine(FileSystem.AppDataDirectory, "LocalBase.db");
             //виводимо шлях для перевірки ТЕСТ ТЕСТ ТЕСТ можна прибрати
             Debug.WriteLine("DB PATH: " + _dbPath);
+            System.Diagnostics.Debug.WriteLine($"================= SQLITE PATH: {_dbPath} =================");
         }
 
         public async Task<SQLiteAsyncConnection> GetConnectionAsync()
@@ -25,7 +26,7 @@ namespace Schedule.Maui.Services
             if (!File.Exists(_dbPath))
             {
                 // 2. Якщо ні — копіюємо її з Resources/Raw
-                using var stream = await FileSystem.OpenAppPackageFileAsync("SchedData.db");
+                using var stream = await FileSystem.OpenAppPackageFileAsync("LocalBase.db");
                 using var newFile = File.Create(_dbPath);
                 await stream.CopyToAsync(newFile);
             }
