@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Schedule.Maui.Models
+namespace Schedule.Core.Models
 {
     public enum UserRole { Supervisor, Admin, Teacher, Student, Guest }
 

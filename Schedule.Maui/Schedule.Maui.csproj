@@ -73,6 +73,7 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\Schedule.Contracts\Schedule.Contracts.csproj" />
+	  <ProjectReference Include="..\Schedule.Core\Schedule.Core.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

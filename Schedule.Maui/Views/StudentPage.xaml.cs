@@ -1,4 +1,4 @@
-﻿using Schedule.Maui.Models;
+﻿using Schedule.Core.Models;
 using Schedule.Maui.Services;
 using Schedule.Maui.ViewModels;
 

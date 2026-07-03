@@ -1,15 +1,12 @@
-﻿using SQLite;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
 
-namespace Schedule.Maui.Models
+namespace Schedule.Core.Models
 {
-    [SQLite.Table("RealLessons")]
     public class RealLesson
     {
-        [PrimaryKey, AutoIncrement]
         public int RealLesson_id { get; set; }
 
         public string? Semester { get; set; }

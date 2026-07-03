@@ -1,5 +1,5 @@
 ﻿using SQLite;
-using Schedule.Maui.Models;
+using Schedule.Core.Models;
 using System.Diagnostics;
 
 namespace Schedule.Maui.Services
