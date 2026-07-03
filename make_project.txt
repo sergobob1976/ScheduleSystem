@@ -1,0 +1,1 @@
+Get-ChildItem -Recurse -Include *.cs, *.csproj, *.sln | Where-Object { $_.FullName -notmatch '\\(bin|obj)\\' } | ForEach-Object { echo "=== FILE: $_ ==="; Get-Content $_; echo "`n" } > projects_all.txt
