@@ -1,6 +1,6 @@
 ﻿using SQLite;
-using Schedule.Core.Models;
 using System.Diagnostics;
+using Schedule.Maui.LocalModels;
 
 namespace Schedule.Maui.Services
 {
