@@ -1,4 +1,9 @@
 using Schedule.Infrastructure;
+using System.Text;
+
+// Примусово вмикаємо підтримку українських літер (UTF-8) для консолі сервера
+Console.InputEncoding = Encoding.UTF8;
+Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
