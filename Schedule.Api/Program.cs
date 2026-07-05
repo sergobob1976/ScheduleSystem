@@ -1,30 +1,57 @@
+using Schedule.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Додаємо сервіси Swashbuckle Swagger для генерації документації
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+// =========================================================================
+// 1. Реєстрація сервісів у контейнері залежностей (Dependency Injection)
+// =========================================================================
 
-// Додаємо підтримку контролерів (знадобиться для твоїх майбутніх API-ендпоінтів)
 builder.Services.AddControllers();
+
+// Реєструємо ініціалізатор бази даних як Transient сервіс
+builder.Services.AddTransient<DatabaseInitializer>();
+
+// (Сюди згодом ми будемо додавати реєстрацію твоїх репозиторіїв та сервісів,
+// наприклад: builder.Services.AddScoped<IGroupRepository, GroupRepository>();)
+
 
 var app = builder.Build();
 
-// 2. Налаштовуємо HTTP-пайплайн
-// Включаємо сторінку Swagger у браузері лише для локальної розробки (Development)
-if (app.Environment.IsDevelopment())
+// =========================================================================
+// 2. Автоматична ініціалізація бази даних MySQL при старті сервера
+// =========================================================================
+
+using (var scope = app.Services.CreateScope())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(c =>
+    try
     {
-        // Налаштовуємо Swagger UI на корінь сайту (не обов'язково, але зручно)
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Schedule API v1");
-    });
+        var initializer = scope.ServiceProvider.GetRequiredService<DatabaseInitializer>();
+        initializer.Initialize();
+
+        // Виводимо повідомлення в консоль, щоб переконатися, що все ок
+        app.Logger.LogInformation("База даних успішно ініціалізована, таблиці створено.");
+    }
+    catch (Exception ex)
+    {
+        app.Logger.LogError(ex, "Помилка під час ініціалізації бази даних MySQL!");
+        // Якщо база не підключилася (наприклад, сервер MySQL вимкнено), 
+        // додаток зупиниться і покаже помилку в консолі
+        throw;
+    }
 }
 
+// =========================================================================
+// 3. Налаштування HTTP-конвеєра (Middleware)
+// =========================================================================
+
+// Забезпечуємо перенаправлення на HTTPS
 app.UseHttpsRedirection();
 
+// Вмикаємо авторизацію (знадобиться для Диспетчера в Schedule.Web)
 app.UseAuthorization();
 
+// Мапимо контролери (щоб сервер знав, куди направляти маршрути api/...)
 app.MapControllers();
 
+// Запуск сервера
 app.Run();
