@@ -1,5 +1,7 @@
 using Schedule.Infrastructure;
 using System.Text;
+using Schedule.Core.Interfaces;
+using Schedule.Infrastructure.Repositories;
 
 // Примусово вмикаємо підтримку українських літер (UTF-8) для консолі сервера
 Console.InputEncoding = Encoding.UTF8;
@@ -19,6 +21,13 @@ builder.Services.AddTransient<DatabaseInitializer>();
 // (Сюди згодом ми будемо додавати реєстрацію твоїх репозиторіїв та сервісів,
 // наприклад: builder.Services.AddScoped<IGroupRepository, GroupRepository>();)
 
+// Реєструємо наші репозиторії
+builder.Services.AddScoped<IGroupRepository, GroupRepository>();
+builder.Services.AddScoped<ITeacherRepository, TeacherRepository>();
+builder.Services.AddScoped<IClassRoomRepository, ClassRoomRepository>();
+builder.Services.AddScoped<IDisciplineRepository, DisciplineRepository>();
+builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
+builder.Services.AddScoped<IRealLessonRepository, RealLessonRepository>();
 
 var app = builder.Build();
 

@@ -20,51 +20,43 @@ public class DatabaseInitializer
         using IDbConnection connection = new MySqlConnection(_connectionString);
         connection.Open();
 
-        // Повний скрипт для створення всієї структури бази даних MySQL
+        // На цьому етапі створюємо лише ті таблиці, з якими вже вміємо працювати
         string createTablesSql = @"
-            -- 1. Таблиця Користувачів (Адміністратори/Диспетчери)
-            CREATE TABLE IF NOT EXISTS `Users` (
-                `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                `Username` VARCHAR(50) NOT NULL UNIQUE,
-                `PasswordHash` VARCHAR(255) NOT NULL,
-                `Role` VARCHAR(20) NOT NULL
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-            -- 2. Таблиця Груп
+            -- 1. Таблиця Груп (вже працює)
             CREATE TABLE IF NOT EXISTS `Groups` (
                 `Id` INT AUTO_INCREMENT PRIMARY KEY,
                 `Name` VARCHAR(50) NOT NULL UNIQUE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-            -- 3. Таблиця Викладачів
+            -- 2. Таблиця Викладачів (додаємо зараз)
             CREATE TABLE IF NOT EXISTS `Teachers` (
                 `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                `FirstName` VARCHAR(50) NOT NULL,
-                `LastName` VARCHAR(50) NOT NULL,
-                `MiddleName` VARCHAR(50) NULL
+                `Name` VARCHAR(100) NOT NULL UNIQUE,
+                `Position` VARCHAR(100) NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-            -- 4. Таблиця Предметів (Дисциплін)
-            CREATE TABLE IF NOT EXISTS `Disciplines` (
-                `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                `Name` VARCHAR(150) NOT NULL UNIQUE
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-            -- 5. Таблиця Аудиторій (Кабінетів)
+            
+            -- 3. Таблиця Аудиторій (додаємо зараз)
             CREATE TABLE IF NOT EXISTS `ClassRooms` (
                 `Id` INT AUTO_INCREMENT PRIMARY KEY,
                 `Name` VARCHAR(50) NOT NULL UNIQUE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-            -- 6. Таблиця Семестрів (Навчальних періодів)
+            
+            -- 4. Таблиця Предметів (додаємо зараз)
+            CREATE TABLE IF NOT EXISTS `Disciplines` (
+                `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                `Name` VARCHAR(150) NOT NULL UNIQUE,
+                `TotalHours` INT NULL
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            
+            -- 5. Таблиця Семестрів (додаємо зараз)
             CREATE TABLE IF NOT EXISTS `Semesters` (
                 `Id` INT AUTO_INCREMENT PRIMARY KEY,
-                `Name` VARCHAR(100) NOT NULL,
+                `Name` VARCHAR(100) NOT NULL UNIQUE,
                 `StartDate` DATE NOT NULL,
                 `EndDate` DATE NOT NULL
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-            -- 7. Головна таблиця Розкладу (Пари / Реальні уроки)
+            -- 6. Головна таблиця Розкладу (додаємо зараз)
             CREATE TABLE IF NOT EXISTS `RealLessons` (
                 `Id` INT AUTO_INCREMENT PRIMARY KEY,
                 `GroupId` INT NOT NULL,
@@ -72,16 +64,21 @@ public class DatabaseInitializer
                 `DisciplineId` INT NOT NULL,
                 `ClassRoomId` INT NULL,
                 `SemesterId` INT NOT NULL,
-                `LessonDate` DATE NOT NULL,              -- Конкретна дата проведення пари
-                `LessonPosition` INT NOT NULL,           -- Номер пари (1, 2, 3...)
-                `WeekDay` INT NOT NULL,                  -- День тижня (1 = Понеділок тощо)
-                `WeekProperty` INT NOT NULL,             -- Чисельник / Знаменник / Кожен тиждень
-                CONSTRAINT `FK_Lessons_Group` FOREIGN KEY (`GroupId`) REFERENCES `Groups`(`Id`) ON DELETE CASCADE,
-                CONSTRAINT `FK_Lessons_Teacher` FOREIGN KEY (`TeacherId`) REFERENCES `Teachers`(`Id`) ON DELETE CASCADE,
-                CONSTRAINT `FK_Lessons_Discipline` FOREIGN KEY (`DisciplineId`) REFERENCES `Disciplines`(`Id`) ON DELETE CASCADE,
-                CONSTRAINT `FK_Lessons_ClassRoom` FOREIGN KEY (`ClassRoomId`) REFERENCES `ClassRooms`(`Id`) ON DELETE SET NULL,
-                CONSTRAINT `FK_Lessons_Semester` FOREIGN KEY (`SemesterId`) REFERENCES `Semesters`(`Id`) ON DELETE CASCADE
+                `LessonDate` DATE NOT NULL,
+                `LessonPosition` INT NOT NULL,
+                `WeekDay` INT NOT NULL,
+                `WeekProperty` INT NOT NULL,
+                `ConferenceLink` VARCHAR(500) NULL, -- Посилання від викладача
+                `ResourceLink` VARCHAR(500) NULL,   -- Посилання від викладача
+                
+                -- Зв'язки (Foreign Keys) з іншими таблицями через чисельні Id
+                CONSTRAINT `FK_RealLessons_Group` FOREIGN KEY (`GroupId`) REFERENCES `Groups`(`Id`) ON DELETE CASCADE,
+                CONSTRAINT `FK_RealLessons_Teacher` FOREIGN KEY (`TeacherId`) REFERENCES `Teachers`(`Id`) ON DELETE CASCADE,
+                CONSTRAINT `FK_RealLessons_Discipline` FOREIGN KEY (`DisciplineId`) REFERENCES `Disciplines`(`Id`) ON DELETE CASCADE,
+                CONSTRAINT `FK_RealLessons_ClassRoom` FOREIGN KEY (`ClassRoomId`) REFERENCES `ClassRooms`(`Id`) ON DELETE SET NULL,
+                CONSTRAINT `FK_RealLessons_Semester` FOREIGN KEY (`SemesterId`) REFERENCES `Semesters`(`Id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
         ";
 
         connection.Execute(createTablesSql);

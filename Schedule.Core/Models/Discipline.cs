@@ -7,8 +7,8 @@ namespace Schedule.Core.Models
 {
     public class Discipline
     {
-        public string DisciplineName { get; set; } = string.Empty;
-
-        public int TotalHours { get; set; }
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public int? TotalHours { get; set; } // Кількість годин може бути не вказана (NULL)
     }
 }

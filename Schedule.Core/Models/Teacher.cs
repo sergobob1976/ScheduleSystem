@@ -7,8 +7,8 @@ namespace Schedule.Core.Models
 {
     public class Teacher
     {
-        public string TeacherName { get; set; } = string.Empty;
-
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
         public string? Position { get; set; } // Може бути NULL, якщо посада не вказана
     }
 }

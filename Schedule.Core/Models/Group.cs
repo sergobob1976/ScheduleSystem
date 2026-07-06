@@ -7,6 +7,7 @@ namespace Schedule.Core.Models
 {
     public class Group
     {
-        public string GroupName { get; set; } = string.Empty;
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 }

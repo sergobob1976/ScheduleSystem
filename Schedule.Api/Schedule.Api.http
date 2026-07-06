@@ -1,6 +1,90 @@
-@Schedule.Api_HostAddress = http://localhost:5271
+@Schedule.Api_HostAddress = https://localhost:7085
+# (Тут вже має стояти твій правильний порт, який згенерувала Visual Studio!)
 
-GET {{Schedule.Api_HostAddress}}/weatherforecast/
+### 1. Отримати всі групи
+GET {{Schedule.Api_HostAddress}}/api/groups
 Accept: application/json
 
 ###
+
+### 2. Створити першу групу
+POST {{Schedule.Api_HostAddress}}/api/groups
+Content-Type: application/json
+
+{
+  "name": "КН-301"
+}
+
+###
+
+### 3. Отримати всіх викладачів
+GET {{Schedule.Api_HostAddress}}/api/teachers
+Accept: application/json
+
+###
+
+### 4. Додати нового викладача
+POST {{Schedule.Api_HostAddress}}/api/teachers
+Content-Type: application/json
+
+{
+  "name": "Дорошенко Іван Петрович",
+  "position": "Доцент, к.т.н."
+}
+
+### 3. Створити аудиторію
+POST {{Schedule.Api_HostAddress}}/api/classrooms
+Content-Type: application/json
+
+{
+  "name": "302-А"
+}
+
+### 4. Створити новий предмет
+POST {{Schedule.Api_HostAddress}}/api/disciplines
+Content-Type: application/json
+
+{
+  "name": "Об'єктно-орієнтоване програмування",
+  "totalHours": 120
+}
+
+### 5. Створити семестр
+POST {{Schedule.Api_HostAddress}}/api/semesters
+Content-Type: application/json
+
+{
+  "name": "I семестр 2026-2027",
+  "startDate": "2026-09-01",
+  "endDate": "2026-12-31"
+}
+
+### 6. Диспетчер додає пару в розклад
+POST {{Schedule.Api_HostAddress}}/api/reallessons
+Content-Type: application/json
+
+{
+  "groupId": 1,
+  "teacherId": 1,
+  "disciplineId": 1,
+  "classRoomId": 1,
+  "semesterId": 1,
+  "lessonDate": "2026-09-07",
+  "lessonPosition": 1,
+  "weekDay": 1,
+  "weekProperty": 0,
+  "conferenceLink": null,
+  "resourceLink": null
+}
+
+### 7. Викладач оновлює лінки дистанційного навчання для пари №1
+PATCH {{Schedule.Api_HostAddress}}/api/reallessons/1/links
+Content-Type: application/json
+
+{
+  "conferenceLink": "https://zoom.us/j/123456789",
+  "resourceLink": "https://moodle.university.edu/course/view.php?id=45"
+}
+
+### 8. Отримуємо весь розклад з красивими назвами та лінками
+GET {{Schedule.Api_HostAddress}}/api/reallessons

@@ -7,6 +7,7 @@ namespace Schedule.Core.Models
 {
     public class ClassRoom
     {
-        public string ClassRoomName { get; set; } = string.Empty;
+        public int Id { get; set; }
+        public string Name { get; set; } = string.Empty;
     }
 }
