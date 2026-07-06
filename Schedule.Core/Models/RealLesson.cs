@@ -19,8 +19,10 @@ public class RealLesson
     // Основні параметри пари
     public DateTime LessonDate { get; set; }     // Дата (наприклад, 2026-09-15)
     public int LessonPosition { get; set; }      // Номер пари (1, 2, 3...)
-    public int WeekDay { get; set; }             // День тижня (1 = Пн, 2 = Вт...)
-    public int WeekProperty { get; set; }        // 1 = Чисельник, 2 = Знаменник, 0 = Кожен тиждень
+    
+    // Замість int ставимо наші Enums!
+    public required WeekDay WeekDay { get; set; }             // День тижня (1 = Пн, 2 = Вт...)
+    public required WeekProperty WeekProperty { get; set; }        // 1 = Чисельник, 2 = Знаменник, 0 = Кожний тиждень
 
     // Ті самі поля для лінків, які викладачі зможуть редагувати
     public string? ConferenceLink { get; set; }  // Посилання на відеоконференцію

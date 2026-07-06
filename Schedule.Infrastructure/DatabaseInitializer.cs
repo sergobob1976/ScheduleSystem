@@ -79,6 +79,25 @@ public class DatabaseInitializer
                 CONSTRAINT `FK_RealLessons_Semester` FOREIGN KEY (`SemesterId`) REFERENCES `Semesters`(`Id`) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+            -- 7. Таблиця Базового розкладу (Шаблон)
+            CREATE TABLE IF NOT EXISTS `BaseLessons` (
+                `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                `GroupId` INT NOT NULL,
+                `TeacherId` INT NOT NULL,
+                `DisciplineId` INT NOT NULL,
+                `ClassRoomId` INT NULL,
+                `SemesterId` INT NOT NULL,
+                `LessonPosition` INT NOT NULL,
+                `WeekDay` INT NOT NULL,
+                `WeekProperty` INT NOT NULL,
+                
+                CONSTRAINT `FK_BaseLessons_Group` FOREIGN KEY (`GroupId`) REFERENCES `Groups`(`Id`) ON DELETE CASCADE,
+                CONSTRAINT `FK_BaseLessons_Teacher` FOREIGN KEY (`TeacherId`) REFERENCES `Teachers`(`Id`) ON DELETE CASCADE,
+                CONSTRAINT `FK_BaseLessons_Discipline` FOREIGN KEY (`DisciplineId`) REFERENCES `Disciplines`(`Id`) ON DELETE CASCADE,
+                CONSTRAINT `FK_BaseLessons_ClassRoom` FOREIGN KEY (`ClassRoomId`) REFERENCES `ClassRooms`(`Id`) ON DELETE SET NULL,
+                CONSTRAINT `FK_BaseLessons_Semester` FOREIGN KEY (`SemesterId`) REFERENCES `Semesters`(`Id`) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
         ";
 
         connection.Execute(createTablesSql);

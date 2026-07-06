@@ -28,6 +28,7 @@ builder.Services.AddScoped<IClassRoomRepository, ClassRoomRepository>();
 builder.Services.AddScoped<IDisciplineRepository, DisciplineRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<IRealLessonRepository, RealLessonRepository>();
+builder.Services.AddScoped<IBaseLessonRepository, BaseLessonRepository>();
 
 var app = builder.Build();
 

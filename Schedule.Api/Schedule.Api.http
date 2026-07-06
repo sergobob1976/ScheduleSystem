@@ -88,3 +88,18 @@ Content-Type: application/json
 
 ### 8. Отримуємо весь розклад з красивими назвами та лінками
 GET {{Schedule.Api_HostAddress}}/api/reallessons
+
+### 9. Створити шаблон розкладу (BaseLesson)
+POST {{Schedule.Api_HostAddress}}/api/baselessons
+Content-Type: application/json
+
+{
+  "groupId": 1,
+  "teacherId": 1,
+  "disciplineId": 1,
+  "classRoomId": 1,
+  "semesterId": 1,
+  "lessonPosition": 1,
+  "weekDay": 1,
+  "weekProperty": 0
+}
