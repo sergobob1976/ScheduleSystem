@@ -3,29 +3,43 @@ using Schedule.Maui.Services;
 using Schedule.Maui.ViewModels;
 using Schedule.Maui.Views;
 
-namespace Schedule.Maui
+namespace Schedule.Maui;
+
+public static class MauiProgram
 {
-    public static class MauiProgram
+    public static MauiApp CreateMauiApp()
     {
-        public static MauiApp CreateMauiApp()
-        {
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                    fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
-                });
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+            });
 
 #if DEBUG
-    		builder.Logging.AddDebug();
+        builder.Logging.AddDebug();
 #endif
-            // Реєструємо MainPage та MainViewModel як сінглтони в контейнері залежностей
-            builder.Services.AddSingleton<DatabaseService>();
-            builder.Services.AddSingleton<StudentPage>();
-            builder.Services.AddSingleton<StudentViewModel>();
-            return builder.Build();
-        }
+
+        // ==========================================================
+        // РЕЄСТРАЦІЯ СЕРВІСІВ ТА VIEWMODELS (DEPENDENCY INJECTION)
+        // ==========================================================
+
+        // 1. Мережевий клієнт та сервіс локальної бази даних SQLite
+        builder.Services.AddSingleton<HttpClient>();
+        builder.Services.AddSingleton<DatabaseService>();
+
+        // 2. Сервіс офлайн-синхронізації даних з MySQL сервера
+        builder.Services.AddSingleton<SyncService>();
+
+        // 3. Реєстрація архітектурних шарів сторінки студента
+        // Використовуємо AddTransient, щоб при кожному переході на сторінку об'єкти оновлювалися
+        builder.Services.AddTransient<StudentViewModel>();
+        builder.Services.AddTransient<StudentPage>();
+
+        // ==========================================================
+
+        return builder.Build();
     }
 }

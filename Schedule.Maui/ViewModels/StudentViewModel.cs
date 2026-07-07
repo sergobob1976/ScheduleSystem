@@ -1,203 +1,143 @@
-﻿using Schedule.Core.Models;
-using Schedule.Core.Enums;
-using Schedule.Maui.Services;
-using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
-using System.Windows.Input;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Storage;
-using Microsoft.Maui.ApplicationModel;
+using Schedule.Core.Models;
+using Schedule.Maui.Services;
+using Microsoft.Data.Sqlite;
+using System.Data;
+using Dapper;
 
-namespace Schedule.Maui.ViewModels
+namespace Schedule.Maui.ViewModels;
+
+public class StudentViewModel : INotifyPropertyChanged
 {
-    public class StudentViewModel : INotifyPropertyChanged
+    private readonly DatabaseService _databaseService;
+    private DateTime _selectedDate = DateTime.Today;
+    private Group? _selectedGroup;
+    private bool _isBusy;
+
+    public ObservableCollection<RealLesson> AllLessons { get; set; } = new();
+    public ObservableCollection<RealLesson> VisibleLessons { get; set; } = new();
+    public ObservableCollection<Group> Groups { get; set; } = new();
+
+    public DateTime SelectedDate
     {
-        private readonly DatabaseService _databaseService;
-        private User _user;
-        private DateTime _selectedDate = DateTime.Today;
-        private string? _selectedGroup;
-        private string? _selectedTeacher;
-        private string? _selectedClassRoom;
-        private bool _isBusy;
-
-        private const string SelectedGroupKey = "saved_group";
-        private const string SelectedTeacherKey = "saved_teacher";
-
-        private List<RealLesson> _allLessonsFromDb = new();
-        public ObservableCollection<string> Groups { get; } = new();
-        public ObservableCollection<string> Teachers { get; } = new();
-        public ObservableCollection<string> ClassRooms { get; } = new();
-
-        public bool IsBusy
+        get => _selectedDate;
+        set
         {
-            get => _isBusy;
-            set { _isBusy = value; OnPropertyChanged(); }
+            _selectedDate = value;
+            OnPropertyChanged();
+            FilterLessons();
         }
+    }
 
-        public string UserStatus => _user.IsLoggedIn
-            ? $"Користувач: {_user.Username} ({_user.Role})"
-            : "Вхід не виконано";
-
-        public DateTime SelectedDate
+    public Group? SelectedGroup
+    {
+        get => _selectedGroup;
+        set
         {
-            get => _selectedDate;
-            set { _selectedDate = value; OnPropertyChanged(); OnPropertyChanged(nameof(VisibleLessons)); }
+            _selectedGroup = value;
+            OnPropertyChanged();
+            FilterLessons();
         }
+    }
 
-        public string? SelectedGroup
+    public bool IsBusy
+    {
+        get => _isBusy;
+        set
         {
-            get => _selectedGroup;
-            set
-            {
-                if (_selectedGroup != value)
-                {
-                    _selectedGroup = value;
-                    Preferences.Default.Set(SelectedGroupKey, value ?? string.Empty);
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(VisibleLessons));
-                }
-            }
+            _isBusy = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsNotBusy));
         }
+    }
 
-        public string? SelectedTeacher
+    public bool IsNotBusy => !IsBusy;
+
+    public StudentViewModel(DatabaseService databaseService)
+    {
+        _databaseService = databaseService;
+        InitializeAsync();
+    }
+
+    public void InitializeAsync()
+    {
+        try
         {
-            get => _selectedTeacher;
-            set
-            {
-                if (_selectedTeacher != value)
-                {
-                    _selectedTeacher = value;
-                    Preferences.Default.Set(SelectedTeacherKey, value ?? string.Empty);
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(VisibleLessons));
-                }
-            }
-        }
-
-        public string? SelectedClassRoom
-        {
-            get => _selectedClassRoom;
-            set
-            {
-                if (_selectedClassRoom != value)
-                {
-                    _selectedClassRoom = value;
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(VisibleLessons));
-                }
-            }
-        }
-
-        public ObservableCollection<RealLesson> VisibleLessons
-        {
-            get
-            {
-                // Фільтруємо за датою і порівнюємо текстові назви з навігаційних властивостей об'єктів
-                var filtered = _allLessonsFromDb.Where(l =>
-                    l.LessonDate.Date == SelectedDate.Date &&
-                    (string.IsNullOrEmpty(SelectedGroup) || l.Group?.Name == SelectedGroup) &&
-                    (string.IsNullOrEmpty(SelectedTeacher) || l.Teacher?.Name == SelectedTeacher) &&
-                    (string.IsNullOrEmpty(SelectedClassRoom) || l.ClassRoom?.Name == SelectedClassRoom)
-                ).OrderBy(l => l.LessonPosition);
-
-                return new ObservableCollection<RealLesson>(filtered);
-            }
-        }
-
-        public ICommand LoginCommand { get; }
-
-        public StudentViewModel(DatabaseService databaseService)
-        {
-            _databaseService = databaseService;
-            _user = new User { Username = "Гість", IsLoggedIn = false, Role = UserRole.Guest };
-            LoginCommand = new Command(OnLogin);
-        }
-
-        public async Task OnAppearingAsync()
-        {
-            await InitializeAsync();
-        }
-
-        private async Task InitializeAsync()
-        {
-            if (IsBusy) return;
             IsBusy = true;
-            try
+
+            // 1. Завантажуємо всі уроки з локальної SQLite бази даних
+            var lessons = _databaseService.GetRealLessons();
+            AllLessons.Clear();
+            foreach (var lesson in lessons)
             {
-                // 1. Завантаження груп
-                var groupsFromDb = _databaseService.GetGroups();
-                Groups.Clear();
-                foreach (var g in groupsFromDb)
-                {
-                    if (!string.IsNullOrEmpty(g.Name)) Groups.Add(g.Name);
-                }
-
-                // 2. Завантаження вчителів
-                var teachersFromDb = _databaseService.GetTeachers();
-                Teachers.Clear();
-                Teachers.Add(string.Empty);
-                foreach (var t in teachersFromDb)
-                {
-                    if (!string.IsNullOrEmpty(t.Name)) Teachers.Add(t.Name);
-                }
-
-                // 3. Завантаження аудиторій
-                var roomsFromDb = _databaseService.GetClassRooms();
-                ClassRooms.Clear();
-                ClassRooms.Add(string.Empty);
-                foreach (var r in roomsFromDb)
-                {
-                    if (!string.IsNullOrEmpty(r.Name)) ClassRooms.Add(r.Name);
-                }
-
-                // 4. Завантаження занять
-                _allLessonsFromDb = _databaseService.GetRealLessons();
-
-                // 5. Відновлення налаштувань
-                var savedGroup = Preferences.Default.Get(SelectedGroupKey, string.Empty);
-                var savedTeacher = Preferences.Default.Get(SelectedTeacherKey, string.Empty);
-
-                if (!string.IsNullOrEmpty(savedGroup) && Groups.Contains(savedGroup))
-                    _selectedGroup = savedGroup;
-
-                if (!string.IsNullOrEmpty(savedTeacher) && Teachers.Contains(savedTeacher))
-                    _selectedTeacher = savedTeacher;
-
-                OnPropertyChanged(nameof(SelectedGroup));
-                OnPropertyChanged(nameof(SelectedTeacher));
-                OnPropertyChanged(nameof(VisibleLessons));
+                AllLessons.Add(lesson);
             }
-            catch (Exception ex)
-            {
-                if (Shell.Current != null)
-                {
-                    MainThread.BeginInvokeOnMainThread(async () =>
-                    {
-                        await Shell.Current.DisplayAlertAsync("Помилка БД", ex.Message, "OK");
-                    });
-                }
-            }
-            finally
-            {
-                IsBusy = false;
-            }
+
+            // 2. Витягуємо унікальний список груп з таблиці Groups
+            LoadLocalGroups();
+
+            // 3. Фільтруємо розклад для поточного відображення на екрані
+            FilterLessons();
         }
-
-        private void OnLogin()
+        catch (Exception ex)
         {
-            _user.Username = "Адміністратор";
-            _user.IsLoggedIn = true;
-            _user.Role = UserRole.Admin;
-            OnPropertyChanged(nameof(UserStatus));
+            System.Diagnostics.Debug.WriteLine($"Error initializing ViewModel: {ex.Message}");
         }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
 
-        public event PropertyChangedEventHandler? PropertyChanged;
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = "") =>
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    private void LoadLocalGroups()
+    {
+        try
+        {
+            var dbPath = Path.Combine(FileSystem.AppDataDirectory, "schedule.db");
+            using IDbConnection db = new SqliteConnection($"Data Source={dbPath}");
+
+            // Запит через Dapper до локальної таблиці груп
+            var groupsList = db.Query<Group>("SELECT * FROM Groups").ToList();
+
+            Groups.Clear();
+            foreach (var g in groupsList)
+            {
+                Groups.Add(g);
+            }
+
+            // Якщо групи існують і нічого ще не обрано, вибираємо першу за замовчуванням
+            if (Groups.Count > 0 && SelectedGroup == null)
+            {
+                SelectedGroup = Groups[0];
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Зараз локальна база порожня: {ex.Message}");
+        }
+    }
+
+    private void FilterLessons()
+    {
+        VisibleLessons.Clear();
+
+        // Фільтруємо за обраною датою та обраною у Picker групою
+        var filtered = AllLessons.Where(l =>
+            l.LessonDate.Date == SelectedDate.Date &&
+            (SelectedGroup == null || l.Group?.Id == SelectedGroup.Id)
+        ).OrderBy(l => l.LessonPosition);
+
+        foreach (var lesson in filtered)
+        {
+            VisibleLessons.Add(lesson);
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected void OnPropertyChanged([CallerMemberName] string propertyName = "")
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }

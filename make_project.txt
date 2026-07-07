@@ -10,3 +10,26 @@ Get-ChildItem -Recurse -Include *.cs, *.csproj, *.razor | Where-Object {
     "`n================================================`nFILE: $($_.FullName.Replace('D:\PROJECTS\ScheduleSystem\', ''))`n================================================`n" | Out-File -Append -FilePath "clean_solution.txt"
     Get-Content $_.FullName | Out-File -Append -FilePath "clean_solution.txt"
 }
+
+
+Get-ChildItem -Recurse -File | Where-Object { 
+    $_.FullName -notmatch '\\(bin|obj|\.git|\.vs|node_modules)\\.' -and 
+    $_.Extension -in '.cs', '.xaml', '.razor', '.json', '.config', '.html', '.css' 
+} | ForEach-Object {
+    "================================================" | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+    "FILE: $($_.FullName.Replace((Get-Location).Path + '\', ''))" | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+    "================================================" | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+    Get-Content $_.FullName | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+    "" | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+}
+
+
+git ls-files | Where-Object { 
+    $_ -match '\.(cs|xaml|razor|json|config|html|css)$' 
+} | ForEach-Object {
+    "================================================" | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+    "FILE: $_" | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+    "================================================" | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+    Get-Content $_ | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+    "" | Out-File -FilePath "clean_solution.txt" -Append -Encoding utf8
+}
