@@ -1,9 +1,17 @@
 ﻿using Schedule.Core.Models;
+using Schedule.Core.Enums;
 using Schedule.Maui.Services;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows.Input;
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Storage;
+using Microsoft.Maui.ApplicationModel;
 
 namespace Schedule.Maui.ViewModels
 {
@@ -11,10 +19,10 @@ namespace Schedule.Maui.ViewModels
     {
         private readonly DatabaseService _databaseService;
         private User _user;
-        private DateTime _selectedDate = DateTime.Now;
+        private DateTime _selectedDate = DateTime.Today;
         private string? _selectedGroup;
         private string? _selectedTeacher;
-        private string? _selectedClassRoom; // Нове поле
+        private string? _selectedClassRoom;
         private bool _isBusy;
 
         private const string SelectedGroupKey = "saved_group";
@@ -23,7 +31,7 @@ namespace Schedule.Maui.ViewModels
         private List<RealLesson> _allLessonsFromDb = new();
         public ObservableCollection<string> Groups { get; } = new();
         public ObservableCollection<string> Teachers { get; } = new();
-        public ObservableCollection<string> ClassRooms { get; } = new(); // Для Picker аудиторій
+        public ObservableCollection<string> ClassRooms { get; } = new();
 
         public bool IsBusy
         {
@@ -71,7 +79,6 @@ namespace Schedule.Maui.ViewModels
             }
         }
 
-        // Властивість для аудиторії (БЕЗ збереження в Preferences)
         public string? SelectedClassRoom
         {
             get => _selectedClassRoom;
@@ -90,13 +97,12 @@ namespace Schedule.Maui.ViewModels
         {
             get
             {
-                string dateString = SelectedDate.ToString("yyyy-MM-dd");
-
+                // Фільтруємо за датою і порівнюємо текстові назви з навігаційних властивостей об'єктів
                 var filtered = _allLessonsFromDb.Where(l =>
-                    l.Date == dateString &&
-                    (string.IsNullOrEmpty(SelectedGroup) || l.Group == SelectedGroup) &&
-                    (string.IsNullOrEmpty(SelectedTeacher) || l.Teacher == SelectedTeacher) &&
-                    (string.IsNullOrEmpty(SelectedClassRoom) || l.ClassRoom == SelectedClassRoom) // Новий фільтр
+                    l.LessonDate.Date == SelectedDate.Date &&
+                    (string.IsNullOrEmpty(SelectedGroup) || l.Group?.Name == SelectedGroup) &&
+                    (string.IsNullOrEmpty(SelectedTeacher) || l.Teacher?.Name == SelectedTeacher) &&
+                    (string.IsNullOrEmpty(SelectedClassRoom) || l.ClassRoom?.Name == SelectedClassRoom)
                 ).OrderBy(l => l.LessonPosition);
 
                 return new ObservableCollection<RealLesson>(filtered);
@@ -126,24 +132,33 @@ namespace Schedule.Maui.ViewModels
                 // 1. Завантаження груп
                 var groupsFromDb = _databaseService.GetGroups();
                 Groups.Clear();
-                foreach (var g in groupsFromDb) Groups.Add(g.GroupName);
+                foreach (var g in groupsFromDb)
+                {
+                    if (!string.IsNullOrEmpty(g.Name)) Groups.Add(g.Name);
+                }
 
-                // 2. Завантаження вчителів (викликаємо GetTeachers із нашого нового сервісу)
+                // 2. Завантаження вчителів
                 var teachersFromDb = _databaseService.GetTeachers();
                 Teachers.Clear();
                 Teachers.Add(string.Empty);
-                foreach (var t in teachersFromDb) Teachers.Add(t.TeacherName);
+                foreach (var t in teachersFromDb)
+                {
+                    if (!string.IsNullOrEmpty(t.Name)) Teachers.Add(t.Name);
+                }
 
-                // 3. Завантаження аудиторій (викликаємо GetClassRooms)
+                // 3. Завантаження аудиторій
                 var roomsFromDb = _databaseService.GetClassRooms();
                 ClassRooms.Clear();
                 ClassRooms.Add(string.Empty);
-                foreach (var r in roomsFromDb) ClassRooms.Add(r.ClassRoomName);
+                foreach (var r in roomsFromDb)
+                {
+                    if (!string.IsNullOrEmpty(r.Name)) ClassRooms.Add(r.Name);
+                }
 
-                // 4. Завантаження занять (викликаємо GetRealLessons)
+                // 4. Завантаження занять
                 _allLessonsFromDb = _databaseService.GetRealLessons();
 
-                // 5. Відновлення налаштувань (Тільки група та вчитель)
+                // 5. Відновлення налаштувань
                 var savedGroup = Preferences.Default.Get(SelectedGroupKey, string.Empty);
                 var savedTeacher = Preferences.Default.Get(SelectedTeacherKey, string.Empty);
 
@@ -159,7 +174,13 @@ namespace Schedule.Maui.ViewModels
             }
             catch (Exception ex)
             {
-                await Shell.Current.DisplayAlertAsync("Помилка БД", ex.Message, "OK");
+                if (Shell.Current != null)
+                {
+                    MainThread.BeginInvokeOnMainThread(async () =>
+                    {
+                        await Shell.Current.DisplayAlertAsync("Помилка БД", ex.Message, "OK");
+                    });
+                }
             }
             finally
             {
