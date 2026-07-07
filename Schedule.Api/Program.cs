@@ -71,8 +71,11 @@ using (var scope = app.Services.CreateScope())
 // 3. Налаштування HTTP-конвеєра (Middleware)
 // =========================================================================
 
-// Забезпечуємо перенаправлення на HTTPS
-app.UseHttpsRedirection();
+// Перенаправляємо на HTTPS тільки в продакшені, а під час розробки (Development) дозволяємо HTTP
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 // --- І ДОДАЙ ЦЕЙ РЯДОК ПЕРЕД app.UseAuthorization() ---
 app.UseCors("AllowAll");

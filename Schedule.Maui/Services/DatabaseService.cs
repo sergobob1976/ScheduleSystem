@@ -28,9 +28,8 @@ public class DatabaseService
 
             CREATE TABLE IF NOT EXISTS Teachers (
                 Id INTEGER PRIMARY KEY,
-                FirstName TEXT NOT NULL,
-                LastName TEXT NOT NULL,
-                MiddleName TEXT
+                Name TEXT NOT NULL,
+                Position TEXT
             );
 
             CREATE TABLE IF NOT EXISTS ClassRooms (
@@ -88,7 +87,6 @@ public class DatabaseService
         }
     }
 
-    // Метод для повного збереження синхронізованих даних в єдиній транзакції
     public void SaveSyncedData(
         IEnumerable<Group> groups,
         IEnumerable<Teacher> teachers,
@@ -109,13 +107,13 @@ public class DatabaseService
             db.Execute("DELETE FROM ClassRooms", transaction: transaction);
             db.Execute("DELETE FROM Disciplines", transaction: transaction);
 
-            // 2. Вставляємо довідники
+            // 2. Вставляємо довідники (ВИПРАВЛЕНО під вашу модель Teacher)
             db.Execute("INSERT INTO Groups (Id, Name) VALUES (@Id, @Name)", groups, transaction: transaction);
-            db.Execute("INSERT INTO Teachers (Id, FirstName, LastName, MiddleName) VALUES (@Id, @FirstName, @LastName, @MiddleName)", teachers, transaction: transaction);
+            db.Execute("INSERT INTO Teachers (Id, Name, Position) VALUES (@Id, @Name, @Position)", teachers, transaction: transaction);
             db.Execute("INSERT INTO ClassRooms (Id, Name) VALUES (@Id, @Name)", classRooms, transaction: transaction);
             db.Execute("INSERT INTO Disciplines (Id, Name) VALUES (@Id, @Name)", disciplines, transaction: transaction);
 
-            // 3. Вставляємо уроки (зберігаючи зовнішні ключі ID)
+            // 3. Вставляємо уроки
             var lessonParameters = lessons.Select(l => new
             {
                 l.LessonPosition,

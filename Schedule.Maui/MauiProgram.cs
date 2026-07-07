@@ -27,7 +27,15 @@ public static class MauiProgram
         // ==========================================================
 
         // 1. Мережевий клієнт та сервіс локальної бази даних SQLite
-        builder.Services.AddSingleton<HttpClient>();
+        // Замість звичайного AddSingleton<HttpClient> додаємо клієнт з ігноруванням сертифікатів для localhost:
+        builder.Services.AddSingleton(sp =>
+        {
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            };
+            return new HttpClient(handler);
+        });
         builder.Services.AddSingleton<DatabaseService>();
 
         // 2. Сервіс офлайн-синхронізації даних з MySQL сервера

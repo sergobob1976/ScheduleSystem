@@ -9,32 +9,26 @@ public class SyncService
     private readonly DatabaseService _databaseService;
     private readonly string _baseApiUrl;
 
+    // Використовуємо ін'єктований httpClient, який налаштовується в MauiProgram
     public SyncService(HttpClient httpClient, DatabaseService databaseService)
     {
         _httpClient = httpClient;
         _databaseService = databaseService;
-        _baseApiUrl = "http://10.0.2.2:5170/api";
+
+        // Для Windows використовуємо вашу перевірену HTTPS адресу
+        _baseApiUrl = "https://localhost:7085/api";
     }
 
     public async Task<bool> SyncScheduleForGroupAsync(int groupId)
     {
         try
         {
-            var groupsTask = _httpClient.GetFromJsonAsync<List<Group>>($"{_baseApiUrl}/Groups");
-            var teachersTask = _httpClient.GetFromJsonAsync<List<Teacher>>($"{_baseApiUrl}/Teachers");
-
-            // ВИПРАВЛЕНО: Змінено тип з ClassRooms на ClassRoom
-            var classRoomsTask = _httpClient.GetFromJsonAsync<List<ClassRoom>>($"{_baseApiUrl}/ClassRooms");
-            var disciplinesTask = _httpClient.GetFromJsonAsync<List<Discipline>>($"{_baseApiUrl}/Disciplines");
-            var lessonsTask = _httpClient.GetFromJsonAsync<List<RealLesson>>($"{_baseApiUrl}/RealLessons/group/{groupId}");
-
-            await Task.WhenAll(groupsTask, teachersTask, classRoomsTask, disciplinesTask, lessonsTask);
-
-            var groups = await groupsTask ?? new();
-            var teachers = await teachersTask ?? new();
-            var classRooms = await classRoomsTask ?? new();
-            var disciplines = await disciplinesTask ?? new();
-            var lessons = await lessonsTask ?? new();
+            // Складаємо точні URL та робимо запити
+            var groups = await _httpClient.GetFromJsonAsync<List<Group>>($"{_baseApiUrl}/Groups") ?? new();
+            var teachers = await _httpClient.GetFromJsonAsync<List<Teacher>>($"{_baseApiUrl}/Teachers") ?? new();
+            var classRooms = await _httpClient.GetFromJsonAsync<List<ClassRoom>>($"{_baseApiUrl}/ClassRooms") ?? new();
+            var disciplines = await _httpClient.GetFromJsonAsync<List<Discipline>>($"{_baseApiUrl}/Disciplines") ?? new();
+            var lessons = await _httpClient.GetFromJsonAsync<List<RealLesson>>($"{_baseApiUrl}/RealLessons/group/{groupId}") ?? new();
 
             _databaseService.SaveSyncedData(groups, teachers, classRooms, disciplines, lessons);
 
@@ -42,8 +36,8 @@ public class SyncService
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Помилка синхронізації з API: {ex.Message}");
-            return false;
+            // Виводимо точну помилку, якщо щось піде не так
+            throw new Exception($"Помилка запиту до {_baseApiUrl}: {ex.Message}. {ex.InnerException?.Message}");
         }
     }
 }
