@@ -1,0 +1,126 @@
+﻿@page "/groups"
+@using Schedule.Core.Models
+@inject HttpClient Http
+
+<h3 class="mb-4">🎒 Довідник груп (Панель диспетчера)</h3>
+
+<div class="card mb-4 col-md-6">
+    <div class="card-body">
+        <h5 class="card-title">Створити нову групу</h5>
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Назва групи (напр. КН-301)" @bind="newGroupName" />
+            <button class="btn btn-primary" @onclick="CreateGroup">Додати</button>
+        </div>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="text-danger mt-2">@errorMessage</div>
+        }
+    </div>
+</div>
+
+@if (groups == null)
+{
+    <p><em>Завантаження списку груп...</em></p>
+}
+else if (!groups.Any())
+{
+    <p>У базі даних поки немає жодної групи.</p>
+}
+else
+{
+    <table class="table table-striped table-hover col-md-8">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 10%">ID</th>
+                <th style="width: 70%">Назва групи</th>
+                <th style="width: 20%">Дії</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var group in groups)
+            {
+                <tr>
+                    <td>@group.Id</td>
+                    <td>@group.Name</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteGroup(group.Id)">Видалити</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Group>? groups;
+    private string newGroupName = "";
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadGroups();
+    }
+
+    private async Task LoadGroups()
+    {
+        try
+        {
+            groups = await Http.GetFromJsonAsync<List<Group>>("api/groups");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка завантаження: {ex.Message}";
+        }
+    }
+
+    private async Task CreateGroup()
+    {
+        if (string.IsNullOrWhiteSpace(newGroupName))
+        {
+            errorMessage = "Назва групи не може бути порожньою!";
+            return;
+        }
+
+        errorMessage = "";
+        var newGroup = new Group { Name = newGroupName };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/groups", newGroup);
+            if (response.IsSuccessStatusCode)
+            {
+                newGroupName = "";
+                await LoadGroups();
+            }
+            else
+            {
+                errorMessage = "Не вдалося зберегти групу.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка з'єднання з сервером: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteGroup(int id)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/groups/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                errorMessage = "";
+                await LoadGroups();
+            }
+            else
+            {
+                errorMessage = "Не вдалося видалити групу. Можливо, вона вже прив'язана до розкладу.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Помилка: {ex.Message}";
+        }
+    }
+}

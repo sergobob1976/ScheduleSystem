@@ -76,7 +76,12 @@ public class DatabaseInitializer
                 CONSTRAINT `FK_RealLessons_Teacher` FOREIGN KEY (`TeacherId`) REFERENCES `Teachers`(`Id`) ON DELETE CASCADE,
                 CONSTRAINT `FK_RealLessons_Discipline` FOREIGN KEY (`DisciplineId`) REFERENCES `Disciplines`(`Id`) ON DELETE CASCADE,
                 CONSTRAINT `FK_RealLessons_ClassRoom` FOREIGN KEY (`ClassRoomId`) REFERENCES `ClassRooms`(`Id`) ON DELETE SET NULL,
-                CONSTRAINT `FK_RealLessons_Semester` FOREIGN KEY (`SemesterId`) REFERENCES `Semesters`(`Id`) ON DELETE CASCADE
+                CONSTRAINT `FK_RealLessons_Semester` FOREIGN KEY (`SemesterId`) REFERENCES `Semesters`(`Id`) ON DELETE CASCADE,
+                
+                -- ДОДАЄМО ЦІ ДВА СКЛАДЕНИХ ІНДЕКСИ ПРЯМО СЮДИ:
+                INDEX `IX_RealLessons_Group_Date` (`GroupId`, `LessonDate`),
+                INDEX `IX_RealLessons_Teacher_Date` (`TeacherId`, `LessonDate`)
+
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
             -- 7. Таблиця Базового розкладу (Шаблон)

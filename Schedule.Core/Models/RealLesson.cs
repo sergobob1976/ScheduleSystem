@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
+using Schedule.Core.Enums;
 
 namespace Schedule.Core.Models;
 

@@ -1,0 +1,205 @@
+﻿@page "/schedule"
+@using Schedule.Core.Models
+@using Schedule.Core.Enums
+@inject HttpClient Http
+
+<h3 class="mb-4">📅 Керування розкладом (RealLessons)</h3>
+
+@if (!string.IsNullOrEmpty(infoMessage))
+{
+    <div class="alert alert-info col-md-8">@infoMessage</div>
+}
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Додати пару в розклад</h5>
+
+                <div class="mb-2">
+                    <label class="form-label text-muted small">Група:</label>
+                    <select class="form-select" @bind="selectedGroupId">
+                        <option value="0">-- Оберіть групу --</option>
+                        @if (groups != null)
+                        {
+                            @foreach (var g in groups)
+                            {
+                                <option value="@g.Id">@g.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label text-muted small">Викладач:</label>
+                    <select class="form-select" @bind="selectedTeacherId">
+                        <option value="0">-- Оберіть викладача --</option>
+                        @if (teachers != null)
+                        {
+                            @foreach (var t in teachers)
+                            {
+                                <option value="@t.Id">@t.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label text-muted small">Предмет:</label>
+                    <select class="form-select" @bind="selectedDisciplineId">
+                        <option value="0">-- Оберіть предмет --</option>
+                        @if (disciplines != null)
+                        {
+                            @foreach (var d in disciplines)
+                            {
+                                <option value="@d.Id">@d.Name</option>
+                            }
+                        }
+                    </select>
+                </div>
+
+                <div class="mb-2">
+                    <label class="form-label text-muted small">Дата заняття:</label>
+                    <input type="date" class="form-control" @bind="lessonDate" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label text-muted small">Номер пари:</label>
+                    <select class="form-select" @bind="lessonPosition">
+                        <option value="1">1 пара (08:30 - 09:50)</option>
+                        <option value="2">2 пара (10:00 - 11:20)</option>
+                        <option value="3">3_пара (11:40 - 13:00)</option>
+                        <option value="4">4 пара (13:10 - 14:30)</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-success w-100" @onclick="CreateLesson">Зберегти пару</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <h5>Поточний розклад у базі даних</h5>
+        @if (lessons == null)
+        {
+            <p><em>Завантаження розкладу...</em></p>
+        }
+        else if (!lessons.Any())
+        {
+            <p>Розклад поки порожній.</p>
+        }
+        else
+        {
+            <table class="table table-bordered table-hover bg-white small">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Дата</th>
+                        <th>Пара</th>
+                        <th>Група</th>
+                        <th>Викладач</th>
+                        <th>Предмет</th>
+                        <th>Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in lessons.OrderByDescending(l => l.LessonDate))
+                    {
+                        <tr>
+                            <td>@item.LessonDate.ToString("dd.MM.yyyy")</td>
+                            <td>@item.LessonPosition</td>
+                            <td>@item.Group?.Name</td>
+                            <td>@item.Teacher?.Name</td>
+                            <td>@item.Discipline?.Name</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLesson(item.Id)">Видалити</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>
+
+@code {
+    private List<RealLesson>? lessons;
+    private List<Group>? groups;
+    private List<Teacher>? teachers;
+    private List<Discipline>? disciplines;
+
+    // Поля форми
+    private int selectedGroupId;
+    private int selectedTeacherId;
+    private int selectedDisciplineId;
+    private DateTime lessonDate = DateTime.Today;
+    private int lessonPosition = 1;
+
+    private string infoMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAllData();
+    }
+
+    private async Task LoadAllData()
+    {
+        try
+        {
+            lessons = await Http.GetFromJsonAsync<List<RealLesson>>("api/reallessons");
+            groups = await Http.GetFromJsonAsync<List<Group>>("api/groups");
+            teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers");
+            disciplines = await Http.GetFromJsonAsync<List<Discipline>>("api/disciplines");
+        }
+        catch (Exception ex)
+        {
+            infoMessage = $"Помилка завантаження: {ex.Message}";
+        }
+    }
+
+    private async Task CreateLesson()
+    {
+        if (selectedGroupId == 0 || selectedTeacherId == 0 || selectedDisciplineId == 0)
+        {
+            infoMessage = "Помилка: Оберіть групу, викладача та предмет!";
+            return;
+        }
+
+        var dayValue = (int)lessonDate.DayOfWeek == 0 ? 7 : (int)lessonDate.DayOfWeek;
+
+        var newLesson = new RealLesson
+        {
+            GroupId = selectedGroupId,
+            TeacherId = selectedTeacherId,
+            DisciplineId = selectedDisciplineId,
+            SemesterId = 1,
+            ClassRoomId = null,
+            LessonDate = lessonDate,
+            LessonPosition = lessonPosition,
+
+            // Явно приводимо int до нашого Enum:
+            WeekDay = (WeekDay)dayValue,
+            WeekProperty = WeekProperty.EveryWeek
+        };
+
+        var response = await Http.PostAsJsonAsync("api/reallessons", newLesson);
+        if (response.IsSuccessStatusCode)
+        {
+            infoMessage = "Пару успішно додано в розклад!";
+            await LoadAllData();
+        }
+        else
+        {
+            infoMessage = "Не вдалося зберегти пару на сервері.";
+        }
+    }
+
+    private async Task DeleteLesson(int id)
+    {
+        var response = await Http.DeleteAsync($"api/reallessons/{id}");
+        if (response.IsSuccessStatusCode)
+        {
+            infoMessage = "Пару видалено.";
+            await LoadAllData();
+        }
+    }
+}

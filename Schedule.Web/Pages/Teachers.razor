@@ -1,0 +1,116 @@
+﻿@page "/teachers"
+@using Schedule.Core.Models
+@inject HttpClient Http
+
+<h3 class="mb-4">👨‍🏫 Довідник викладачів</h3>
+
+<div class="card mb-4 col-md-6">
+    <div class="card-body">
+        <h5 class="card-title">Додати викладача</h5>
+        <div class="mb-3">
+            <input type="text" class="form-control mb-2" placeholder="ПІБ викладача" @bind="newTeacherName" />
+            <input type="text" class="form-control" placeholder="Посада/науковий ступінь (напр. Доцент, к.т.н.)" @bind="newTeacherPosition" />
+        </div>
+        <button class="btn btn-primary" @onclick="CreateTeacher">Додати</button>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="text-danger mt-2">@errorMessage</div>
+        }
+    </div>
+</div>
+
+@if (teachers == null)
+{
+    <p><em>Завантаження списку...</em></p>
+}
+else if (!teachers.Any())
+{
+    <p>Викладачів поки не додано.</p>
+}
+else
+{
+    <table class="table table-striped table-hover col-md-8">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 10%">ID</th>
+                <th style="width: 50%">ПІБ</th>
+                <th style="width: 30%">Посада</th>
+                <th style="width: 10%">Дії</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var teacher in teachers)
+            {
+                <tr>
+                    <td>@teacher.Id</td>
+                    <td>@teacher.Name</td>
+                    <td>@teacher.Position</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteTeacher(teacher.Id)">Видалити</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Teacher>? teachers;
+    private string newTeacherName = "";
+    private string newTeacherPosition = "";
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync() => await LoadTeachers();
+
+    private async Task LoadTeachers()
+    {
+        try
+        {
+            teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private async Task CreateTeacher()
+    {
+        if (string.IsNullOrWhiteSpace(newTeacherName))
+        {
+            errorMessage = "Ім'я викладача обов'язкове!";
+            return;
+        }
+
+        errorMessage = "";
+        var teacher = new Teacher { Name = newTeacherName, Position = newTeacherPosition };
+        var response = await Http.PostAsJsonAsync("api/teachers", teacher);
+        if (response.IsSuccessStatusCode)
+        {
+            newTeacherName = "";
+            newTeacherPosition = "";
+            await LoadTeachers();
+        }
+    }
+
+    private async Task DeleteTeacher(int id)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/teachers/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                errorMessage = "";
+                await LoadTeachers();
+            }
+            else
+            {
+                errorMessage = "Не вдалося видалити викладача. Він є у розкладі.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

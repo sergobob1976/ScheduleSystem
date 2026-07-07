@@ -6,6 +6,7 @@ using System.Linq;
 using Microsoft.Data.Sqlite;
 using Dapper;
 using Schedule.Core.Models; // Використовуємо класи з нашої Core-бібліотеки
+using Schedule.Core.Enums;
 
 namespace Schedule.Maui.Services
 {

@@ -1,0 +1,112 @@
+﻿@page "/disciplines"
+@using Schedule.Core.Models
+@inject HttpClient Http
+
+<h3 class="mb-4">📚 Довідник предметів (дисциплін)</h3>
+
+<div class="card mb-4 col-md-6">
+    <div class="card-body">
+        <h5 class="card-title">Додати новий предмет</h5>
+        <div class="mb-3">
+            <input type="text" class="form-control mb-2" placeholder="Назва предмету" @bind="name" />
+            <input type="number" class="form-control" placeholder="Загальна кількість годин" @bind="hours" />
+        </div>
+        <button class="btn btn-primary" @onclick="Create">Додати</button>
+        @if (!string.IsNullOrEmpty(error))
+        {
+            <div class="text-danger mt-2">@error</div>
+        }
+    </div>
+</div>
+
+@if (disciplines == null)
+{
+    <p><em>Завантаження...</em></p>
+}
+else if (!disciplines.Any())
+{
+    <p>Предметів поки не додано.</p>
+}
+else
+{
+    <table class="table table-striped table-hover col-md-8">
+        <thead class="table-dark">
+            <tr>
+                <th style="width: 10%">ID</th>
+                <th style="width: 60%">Назва предмету</th>
+                <th style="width: 20%">Усього годин</th>
+                <th style="width: 10%">Дії</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var d in disciplines)
+            {
+                <tr>
+                    <td>@d.Id</td>
+                    <td>@d.Name</td>
+                    <td>@(d.TotalHours.HasValue ? d.TotalHours.Value.ToString() : "Не вказано")</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteDiscipline(d.Id)">Видалити</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Discipline>? disciplines;
+    private string name = "";
+    private int? hours;
+    private string error = "";
+
+    protected override async Task OnInitializedAsync() => await Load();
+
+    private async Task Load()
+    {
+        try
+        {
+            disciplines = await Http.GetFromJsonAsync<List<Discipline>>("api/disciplines");
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private async Task Create()
+    {
+        if (string.IsNullOrWhiteSpace(name)) return;
+
+        error = "";
+        var item = new Discipline { Name = name, TotalHours = hours };
+        var res = await Http.PostAsJsonAsync("api/disciplines", item);
+        if (res.IsSuccessStatusCode)
+        {
+            name = "";
+            hours = null;
+            await Load();
+        }
+    }
+
+    private async Task DeleteDiscipline(int id)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/disciplines/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                error = "";
+                await Load();
+            }
+            else
+            {
+                error = "Не вдалося видалити предмет. Він використовується в розкладі.";
+            }
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

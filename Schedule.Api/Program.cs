@@ -9,6 +9,18 @@ Console.OutputEncoding = Encoding.UTF8;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- ДОДАЙ ЦЕЙ БЛОК ДЛЯ CORS ---
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
+// --------------------------------
+
 // =========================================================================
 // 1. Реєстрація сервісів у контейнері залежностей (Dependency Injection)
 // =========================================================================
@@ -61,6 +73,10 @@ using (var scope = app.Services.CreateScope())
 
 // Забезпечуємо перенаправлення на HTTPS
 app.UseHttpsRedirection();
+
+// --- І ДОДАЙ ЦЕЙ РЯДОК ПЕРЕД app.UseAuthorization() ---
+app.UseCors("AllowAll");
+// -----------------------------------------------------
 
 // Вмикаємо авторизацію (знадобиться для Диспетчера в Schedule.Web)
 app.UseAuthorization();
