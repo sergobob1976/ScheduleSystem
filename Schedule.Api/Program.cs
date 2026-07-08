@@ -71,7 +71,8 @@ using (var scope = app.Services.CreateScope())
 // 3. Налаштування HTTP-конвеєра (Middleware)
 // =========================================================================
 
-// Перенаправляємо на HTTPS тільки в продакшені, а під час розробки (Development) дозволяємо HTTP
+// Перенаправляємо на HTTPS тільки у фінальній версії (Production),
+// а під час розробки (Development) дозволяємо HTTP для сумісності з Android-емулятором
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();

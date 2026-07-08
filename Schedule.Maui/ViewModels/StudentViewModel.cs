@@ -3,9 +3,6 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using Schedule.Core.Models;
 using Schedule.Maui.Services;
-using Microsoft.Data.Sqlite;
-using System.Data;
-using Dapper;
 
 namespace Schedule.Maui.ViewModels;
 
@@ -58,64 +55,63 @@ public class StudentViewModel : INotifyPropertyChanged
     public StudentViewModel(DatabaseService databaseService)
     {
         _databaseService = databaseService;
-        InitializeAsync();
+
+        // Запускаємо первинне завантаження даних при створенні ViewModel
+        _ = InitializeAsync();
     }
 
-    public void InitializeAsync()
+    /// <summary>
+    /// Повне зчитування актуальних даних (груп та занять) із локальної бази SQLite
+    /// </summary>
+    public async Task InitializeAsync()
     {
+        IsBusy = true;
         try
         {
-            IsBusy = true;
+            // 1. Завантажуємо свіжі групи з SQLite сервісу
+            var groupsFromDb = _databaseService.GetGroups();
 
-            // 1. Завантажуємо всі уроки з локальної SQLite бази даних
-            var lessons = _databaseService.GetRealLessons();
-            AllLessons.Clear();
-            foreach (var lesson in lessons)
-            {
-                AllLessons.Add(lesson);
-            }
-
-            // 2. Витягуємо унікальний список груп з таблиці Groups
-            LoadLocalGroups();
-
-            // 3. Фільтруємо розклад для поточного відображення на екрані
-            FilterLessons();
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Error initializing ViewModel: {ex.Message}");
-        }
-        finally
-        {
-            IsBusy = false;
-        }
-    }
-
-    private void LoadLocalGroups()
-    {
-        try
-        {
-            var dbPath = Path.Combine(FileSystem.AppDataDirectory, "schedule.db");
-            using IDbConnection db = new SqliteConnection($"Data Source={dbPath}");
-
-            // Запит через Dapper до локальної таблиці груп
-            var groupsList = db.Query<Group>("SELECT * FROM Groups").ToList();
+            // Зберігаємо поточну обрану групу, щоб вибір не скидався при синхронізації
+            var previousSelectedId = SelectedGroup?.Id;
 
             Groups.Clear();
-            foreach (var g in groupsList)
+            foreach (var g in groupsFromDb)
             {
                 Groups.Add(g);
             }
 
-            // Якщо групи існують і нічого ще не обрано, вибираємо першу за замовчуванням
-            if (Groups.Count > 0 && SelectedGroup == null)
+            // Відновлюємо вибір групи або ставимо першу за замовчуванням
+            if (Groups.Count > 0)
             {
-                SelectedGroup = Groups[0];
+                if (previousSelectedId.HasValue)
+                {
+                    SelectedGroup = Groups.FirstOrDefault(g => g.Id == previousSelectedId.Value) ?? Groups[0];
+                }
+                else if (SelectedGroup == null)
+                {
+                    SelectedGroup = Groups[0];
+                }
             }
+
+            // 2. Завантажуємо заняття
+            var lessonsFromDb = _databaseService.GetRealLessons();
+
+            AllLessons.Clear();
+            foreach (var lesson in lessonsFromDb)
+            {
+                AllLessons.Add(lesson);
+            }
+
+            // 3. Оновлюємо відображення на екрані згідно з фільтрами
+            FilterLessons();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Зараз локальна база порожня: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"Помилка ініціалізації ViewModel: {ex.Message}");
+        }
+        finally
+        {
+            IsBusy = false;
         }
     }
 

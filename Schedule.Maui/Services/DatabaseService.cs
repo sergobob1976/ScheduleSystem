@@ -11,10 +11,14 @@ public class DatabaseService
 
     public DatabaseService()
     {
-        _dbPath = Path.Combine(FileSystem.AppDataDirectory, "schedule.db");
+        // Кросплатформний шлях до файлу локальної бази даних SQLite. 
+        _dbPath = Path.Combine(FileSystem.AppDataDirectory, "schedule_v2.db");
         InitializeDatabase();
     }
 
+    /// <summary>
+    /// Ініціалізація бази даних: створення таблиць, якщо вони не існують
+    /// </summary>
     private void InitializeDatabase()
     {
         using IDbConnection db = new SqliteConnection($"Data Source={_dbPath}");
@@ -49,50 +53,19 @@ public class DatabaseService
                 GroupId INTEGER,
                 TeacherId INTEGER,
                 ClassRoomId INTEGER,
-                DisciplineId INTEGER
+                DisciplineId INTEGER,
+                FOREIGN KEY(GroupId) REFERENCES Groups(Id),
+                FOREIGN KEY(TeacherId) REFERENCES Teachers(Id),
+                FOREIGN KEY(ClassRoomId) REFERENCES ClassRooms(Id),
+                FOREIGN KEY(DisciplineId) REFERENCES Disciplines(Id)
             );
         ");
     }
 
-    public IEnumerable<RealLesson> GetRealLessons()
-    {
-        using IDbConnection db = new SqliteConnection($"Data Source={_dbPath}");
-        try
-        {
-            string sql = @"
-                SELECT l.*, g.*, t.*, c.*, d.*
-                FROM RealLessons l
-                LEFT JOIN Groups g ON l.GroupId = g.Id
-                LEFT JOIN Teachers t ON l.TeacherId = t.Id
-                LEFT JOIN ClassRooms c ON l.ClassRoomId = c.Id
-                LEFT JOIN Disciplines d ON l.DisciplineId = d.Id";
-
-            return db.Query<RealLesson, Group, Teacher, ClassRoom, Discipline, RealLesson>(
-                sql,
-                (lesson, group, teacher, classRoom, discipline) =>
-                {
-                    lesson.Group = group;
-                    lesson.Teacher = teacher;
-                    lesson.ClassRoom = classRoom;
-                    lesson.Discipline = discipline;
-                    return lesson;
-                },
-                splitOn: "Id,Id,Id,Id"
-            );
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"DB Error: {ex.Message}");
-            return Enumerable.Empty<RealLesson>();
-        }
-    }
-
-    public void SaveSyncedData(
-        IEnumerable<Group> groups,
-        IEnumerable<Teacher> teachers,
-        IEnumerable<ClassRoom> classRooms,
-        IEnumerable<Discipline> disciplines,
-        IEnumerable<RealLesson> lessons)
+    /// <summary>
+    /// Очищення старих даних та збереження нових сутностей, отриманих через API
+    /// </summary>
+    public void SaveSyncedData(List<Group> groups, List<Teacher> teachers, List<ClassRoom> classRooms, List<Discipline> disciplines, List<RealLesson> lessons)
     {
         using IDbConnection db = new SqliteConnection($"Data Source={_dbPath}");
         db.Open();
@@ -100,20 +73,20 @@ public class DatabaseService
 
         try
         {
-            // 1. Очищаємо старі дані
-            db.Execute("DELETE FROM RealLessons", transaction: transaction);
+            // 1. Спочатку очищаємо старі локальні довідники
             db.Execute("DELETE FROM Groups", transaction: transaction);
             db.Execute("DELETE FROM Teachers", transaction: transaction);
             db.Execute("DELETE FROM ClassRooms", transaction: transaction);
             db.Execute("DELETE FROM Disciplines", transaction: transaction);
+            db.Execute("DELETE FROM RealLessons", transaction: transaction);
 
-            // 2. Вставляємо довідники (ВИПРАВЛЕНО під вашу модель Teacher)
+            // 2. Вставляємо свіжі довідники з сервера
             db.Execute("INSERT INTO Groups (Id, Name) VALUES (@Id, @Name)", groups, transaction: transaction);
             db.Execute("INSERT INTO Teachers (Id, Name, Position) VALUES (@Id, @Name, @Position)", teachers, transaction: transaction);
             db.Execute("INSERT INTO ClassRooms (Id, Name) VALUES (@Id, @Name)", classRooms, transaction: transaction);
             db.Execute("INSERT INTO Disciplines (Id, Name) VALUES (@Id, @Name)", disciplines, transaction: transaction);
 
-            // 3. Вставляємо уроки
+            // 3. Формуємо параметри для збереження розкладу
             var lessonParameters = lessons.Select(l => new
             {
                 l.LessonPosition,
@@ -136,5 +109,48 @@ public class DatabaseService
             transaction.Rollback();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Завантаження занять з локальної бази даних SQLite
+    /// </summary>
+    public List<RealLesson> GetRealLessons()
+    {
+        using IDbConnection db = new SqliteConnection($"Data Source={_dbPath}");
+        db.Open();
+
+        // Запит з Dapper, який зв'язує таблицю уроків із довідниками груп, викладачів тощо.
+        string sql = @"
+            SELECT r.*, g.*, t.*, c.*, d.*
+            FROM RealLessons r
+            LEFT JOIN Groups g ON r.GroupId = g.Id
+            LEFT JOIN Teachers t ON r.TeacherId = t.Id
+            LEFT JOIN ClassRooms c ON r.ClassRoomId = c.Id
+            LEFT JOIN Disciplines d ON r.DisciplineId = d.Id";
+
+        var lessons = db.Query<RealLesson, Group, Teacher, ClassRoom, Discipline, RealLesson>(
+            sql,
+            (lesson, group, teacher, classRoom, discipline) =>
+            {
+                lesson.Group = group;
+                lesson.Teacher = teacher;
+                lesson.ClassRoom = classRoom;
+                lesson.Discipline = discipline;
+                return lesson;
+            },
+            splitOn: "Id,Id,Id,Id"
+        ).ToList();
+
+        return lessons;
+    }
+
+    /// <summary>
+    /// Завантаження списку груп з локальної бази даних SQLite
+    /// </summary>
+    public List<Group> GetGroups()
+    {
+        using IDbConnection db = new SqliteConnection($"Data Source={_dbPath}");
+        db.Open();
+        return db.Query<Group>("SELECT * FROM Groups ORDER BY Name").ToList();
     }
 }

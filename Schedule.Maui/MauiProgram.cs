@@ -22,31 +22,20 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        // ==========================================================
-        // РЕЄСТРАЦІЯ СЕРВІСІВ ТА VIEWMODELS (DEPENDENCY INJECTION)
-        // ==========================================================
+        // ==========================================
+        // РЕЄСТРАЦІЯ СЕРВІСІВ (Dependency Injection)
+        // ==========================================
 
-        // 1. Мережевий клієнт та сервіс локальної бази даних SQLite
-        // Замість звичайного AddSingleton<HttpClient> додаємо клієнт з ігноруванням сертифікатів для localhost:
-        builder.Services.AddSingleton(sp =>
-        {
-            var handler = new HttpClientHandler
-            {
-                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
-            };
-            return new HttpClient(handler);
-        });
+        // Базовий HttpClient для системних потреб додатку
+        builder.Services.AddSingleton<HttpClient>();
+
+        // Локальна база SQLite та сервіс кросплатформної синхронізації
         builder.Services.AddSingleton<DatabaseService>();
-
-        // 2. Сервіс офлайн-синхронізації даних з MySQL сервера
         builder.Services.AddSingleton<SyncService>();
 
-        // 3. Реєстрація архітектурних шарів сторінки студента
-        // Використовуємо AddTransient, щоб при кожному переході на сторінку об'єкти оновлювалися
+        // Забезпечуємо створення сторінок відображення розкладу через фабрику DI
         builder.Services.AddTransient<StudentViewModel>();
         builder.Services.AddTransient<StudentPage>();
-
-        // ==========================================================
 
         return builder.Build();
     }
