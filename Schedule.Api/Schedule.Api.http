@@ -103,3 +103,18 @@ Content-Type: application/json
   "weekDay": 1,
   "weekProperty": 0
 }
+
+### Get all specialties
+GET https://localhost:7085/api/specialties
+Accept: application/json
+
+###
+
+### Create specialty
+POST https://localhost:7085/api/specialties
+Content-Type: application/json
+
+{
+  "code": "F7",
+  "name": "Комп'ютерні науки"
+}

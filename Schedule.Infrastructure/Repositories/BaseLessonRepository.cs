@@ -48,48 +48,94 @@ public class BaseLessonRepository : IBaseLessonRepository
     public async Task<IEnumerable<BaseLesson>> GetAllAsync()
     {
         using var connection = CreateConnection();
+
         return await connection.QueryAsync<BaseLesson, Group, Teacher, Discipline, ClassRoom, Semester, BaseLesson>(
-            BaseJoinSql, _lessonMapper, splitOn: "Id,Id,Id,Id,Id");
+            BaseJoinSql,
+            _lessonMapper,
+            splitOn: "Id,Id,Id,Id,Id");
     }
 
     public async Task<BaseLesson?> GetByIdAsync(int id)
     {
         using var connection = CreateConnection();
+
         string sql = $"{BaseJoinSql} WHERE bl.Id = @Id";
+
         var results = await connection.QueryAsync<BaseLesson, Group, Teacher, Discipline, ClassRoom, Semester, BaseLesson>(
-            sql, _lessonMapper, new { Id = id }, splitOn: "Id,Id,Id,Id,Id");
+            sql,
+            _lessonMapper,
+            new { Id = id },
+            splitOn: "Id,Id,Id,Id,Id");
+
         return results.FirstOrDefault();
     }
 
     public async Task<IEnumerable<BaseLesson>> GetByGroupIdAsync(int groupId)
     {
         using var connection = CreateConnection();
+
         string sql = $"{BaseJoinSql} WHERE bl.GroupId = @GroupId ORDER BY bl.WeekDay, bl.LessonPosition";
+
         return await connection.QueryAsync<BaseLesson, Group, Teacher, Discipline, ClassRoom, Semester, BaseLesson>(
-            sql, _lessonMapper, new { GroupId = groupId }, splitOn: "Id,Id,Id,Id,Id");
+            sql,
+            _lessonMapper,
+            new { GroupId = groupId },
+            splitOn: "Id,Id,Id,Id,Id");
     }
 
     public async Task<int> CreateAsync(BaseLesson lesson)
     {
         using var connection = CreateConnection();
+
         string sql = @"
-            INSERT INTO `BaseLessons` 
-                (GroupId, TeacherId, DisciplineId, ClassRoomId, SemesterId, LessonPosition, WeekDay, WeekProperty) 
-            VALUES 
-                (@GroupId, @TeacherId, @DisciplineId, @ClassRoomId, @SemesterId, @LessonPosition, @WeekDay, @WeekProperty);
+            INSERT INTO `BaseLessons`
+            (
+                GroupId,
+                TeacherId,
+                DisciplineId,
+                ClassRoomId,
+                SemesterId,
+                LessonPosition,
+                WeekDay,
+                WeekProperty,
+                LessonType
+            )
+            VALUES
+            (
+                @GroupId,
+                @TeacherId,
+                @DisciplineId,
+                @ClassRoomId,
+                @SemesterId,
+                @LessonPosition,
+                @WeekDay,
+                @WeekProperty,
+                @LessonType
+            );
+
             SELECT LAST_INSERT_ID();";
+
         return await connection.ExecuteScalarAsync<int>(sql, lesson);
     }
 
     public async Task<bool> UpdateAsync(BaseLesson lesson)
     {
         using var connection = CreateConnection();
+
         string sql = @"
-            UPDATE `BaseLessons` 
-            SET GroupId = @GroupId, TeacherId = @TeacherId, DisciplineId = @DisciplineId, 
-                ClassRoomId = @ClassRoomId, SemesterId = @SemesterId, 
-                LessonPosition = @LessonPosition, WeekDay = @WeekDay, WeekProperty = @WeekProperty
+            UPDATE `BaseLessons`
+            SET
+                GroupId = @GroupId,
+                TeacherId = @TeacherId,
+                DisciplineId = @DisciplineId,
+                ClassRoomId = @ClassRoomId,
+                SemesterId = @SemesterId,
+                LessonPosition = @LessonPosition,
+                WeekDay = @WeekDay,
+                WeekProperty = @WeekProperty,
+                LessonType = @LessonType
             WHERE Id = @Id";
+
         int rowsAffected = await connection.ExecuteAsync(sql, lesson);
         return rowsAffected > 0;
     }
@@ -97,7 +143,9 @@ public class BaseLessonRepository : IBaseLessonRepository
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = CreateConnection();
+
         string sql = "DELETE FROM `BaseLessons` WHERE Id = @Id";
+
         int rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
         return rowsAffected > 0;
     }

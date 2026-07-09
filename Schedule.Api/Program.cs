@@ -41,6 +41,7 @@ builder.Services.AddScoped<IDisciplineRepository, DisciplineRepository>();
 builder.Services.AddScoped<ISemesterRepository, SemesterRepository>();
 builder.Services.AddScoped<IRealLessonRepository, RealLessonRepository>();
 builder.Services.AddScoped<IBaseLessonRepository, BaseLessonRepository>();
+builder.Services.AddScoped<ISpecialtyRepository, SpecialtyRepository>();
 
 var app = builder.Build();
 

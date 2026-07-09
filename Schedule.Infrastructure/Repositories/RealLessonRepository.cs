@@ -22,7 +22,6 @@ public class RealLessonRepository : IRealLessonRepository
 
     private IDbConnection CreateConnection() => new MySqlConnection(_connectionString);
 
-    // Спільний SQL-запит із JOIN, щоб не дублювати код
     private const string BaseJoinSql = @"
         SELECT 
             rl.*, 
@@ -38,14 +37,13 @@ public class RealLessonRepository : IRealLessonRepository
         LEFT JOIN `ClassRooms` c ON rl.ClassRoomId = c.Id
         INNER JOIN `Semesters` s ON rl.SemesterId = s.Id";
 
-    // Мапувальник, який зшиває окремі рядки з бази в один об'єкт RealLesson з вкладеними властивостями
     private readonly Func<RealLesson, Group, Teacher, Discipline, ClassRoom, Semester, RealLesson> _lessonMapper =
         (lesson, group, teacher, discipline, classroom, semester) =>
         {
             lesson.Group = group;
             lesson.Teacher = teacher;
             lesson.Discipline = discipline;
-            lesson.ClassRoom = classroom; // Може бути null
+            lesson.ClassRoom = classroom;
             lesson.Semester = semester;
             return lesson;
         };
@@ -53,78 +51,149 @@ public class RealLessonRepository : IRealLessonRepository
     public async Task<IEnumerable<RealLesson>> GetAllAsync()
     {
         using var connection = CreateConnection();
-        // В splitOn вказуємо Id кожної наступної таблиці, щоб Dapper знав, де закінчуються поля однієї сутності й починаються поля іншої
+
         return await connection.QueryAsync<RealLesson, Group, Teacher, Discipline, ClassRoom, Semester, RealLesson>(
-            BaseJoinSql, _lessonMapper, splitOn: "Id,Id,Id,Id,Id");
+            BaseJoinSql,
+            _lessonMapper,
+            splitOn: "Id,Id,Id,Id,Id");
     }
 
     public async Task<RealLesson?> GetByIdAsync(int id)
     {
         using var connection = CreateConnection();
+
         string sql = $"{BaseJoinSql} WHERE rl.Id = @Id";
+
         var results = await connection.QueryAsync<RealLesson, Group, Teacher, Discipline, ClassRoom, Semester, RealLesson>(
-            sql, _lessonMapper, new { Id = id }, splitOn: "Id,Id,Id,Id,Id");
+            sql,
+            _lessonMapper,
+            new { Id = id },
+            splitOn: "Id,Id,Id,Id,Id");
+
         return results.FirstOrDefault();
     }
 
     public async Task<IEnumerable<RealLesson>> GetByGroupIdAsync(int groupId)
     {
         using var connection = CreateConnection();
+
         string sql = $"{BaseJoinSql} WHERE rl.GroupId = @GroupId ORDER BY rl.LessonDate, rl.LessonPosition";
+
         return await connection.QueryAsync<RealLesson, Group, Teacher, Discipline, ClassRoom, Semester, RealLesson>(
-            sql, _lessonMapper, new { GroupId = groupId }, splitOn: "Id,Id,Id,Id,Id");
+            sql,
+            _lessonMapper,
+            new { GroupId = groupId },
+            splitOn: "Id,Id,Id,Id,Id");
     }
 
     public async Task<IEnumerable<RealLesson>> GetByTeacherIdAsync(int teacherId)
     {
         using var connection = CreateConnection();
+
         string sql = $"{BaseJoinSql} WHERE rl.TeacherId = @TeacherId ORDER BY rl.LessonDate, rl.LessonPosition";
+
         return await connection.QueryAsync<RealLesson, Group, Teacher, Discipline, ClassRoom, Semester, RealLesson>(
-            sql, _lessonMapper, new { TeacherId = teacherId }, splitOn: "Id,Id,Id,Id,Id");
+            sql,
+            _lessonMapper,
+            new { TeacherId = teacherId },
+            splitOn: "Id,Id,Id,Id,Id");
     }
 
     public async Task<int> CreateAsync(RealLesson lesson)
     {
         using var connection = CreateConnection();
+
         string sql = @"
             INSERT INTO `RealLessons` 
-                (GroupId, TeacherId, DisciplineId, ClassRoomId, SemesterId, LessonDate, LessonPosition, WeekDay, WeekProperty, ConferenceLink, ResourceLink) 
+            (
+                GroupId,
+                TeacherId,
+                DisciplineId,
+                ClassRoomId,
+                SemesterId,
+                LessonDate,
+                LessonPosition,
+                WeekDay,
+                WeekProperty,
+                LessonType,
+                ConferenceLink,
+                ResourceLink
+            ) 
             VALUES 
-                (@GroupId, @TeacherId, @DisciplineId, @ClassRoomId, @SemesterId, @LessonDate, @LessonPosition, @WeekDay, @WeekProperty, @ConferenceLink, @ResourceLink);
+            (
+                @GroupId,
+                @TeacherId,
+                @DisciplineId,
+                @ClassRoomId,
+                @SemesterId,
+                @LessonDate,
+                @LessonPosition,
+                @WeekDay,
+                @WeekProperty,
+                @LessonType,
+                @ConferenceLink,
+                @ResourceLink
+            );
+
             SELECT LAST_INSERT_ID();";
+
         return await connection.ExecuteScalarAsync<int>(sql, lesson);
     }
 
     public async Task<bool> UpdateAsync(RealLesson lesson)
     {
         using var connection = CreateConnection();
+
         string sql = @"
             UPDATE `RealLessons` 
-            SET GroupId = @GroupId, TeacherId = @TeacherId, DisciplineId = @DisciplineId, 
-                ClassRoomId = @ClassRoomId, SemesterId = @SemesterId, LessonDate = @LessonDate, 
-                LessonPosition = @LessonPosition, WeekDay = @WeekDay, WeekProperty = @WeekProperty,
-                ConferenceLink = @ConferenceLink, ResourceLink = @ResourceLink
+            SET
+                GroupId = @GroupId,
+                TeacherId = @TeacherId,
+                DisciplineId = @DisciplineId,
+                ClassRoomId = @ClassRoomId,
+                SemesterId = @SemesterId,
+                LessonDate = @LessonDate,
+                LessonPosition = @LessonPosition,
+                WeekDay = @WeekDay,
+                WeekProperty = @WeekProperty,
+                LessonType = @LessonType,
+                ConferenceLink = @ConferenceLink,
+                ResourceLink = @ResourceLink
             WHERE Id = @Id";
+
         int rowsAffected = await connection.ExecuteAsync(sql, lesson);
         return rowsAffected > 0;
     }
 
-    // Той самий спеціальний метод для викладачів, який міняє ТІЛЬКИ лінки занять і більше нічого!
     public async Task<bool> UpdateLinksAsync(int lessonId, string? conferenceLink, string? resourceLink)
     {
         using var connection = CreateConnection();
+
         string sql = @"
             UPDATE `RealLessons` 
-            SET ConferenceLink = @ConferenceLink, ResourceLink = @ResourceLink 
+            SET
+                ConferenceLink = @ConferenceLink,
+                ResourceLink = @ResourceLink
             WHERE Id = @Id";
-        int rowsAffected = await connection.ExecuteAsync(sql, new { Id = lessonId, ConferenceLink = conferenceLink, ResourceLink = resourceLink });
+
+        int rowsAffected = await connection.ExecuteAsync(
+            sql,
+            new
+            {
+                Id = lessonId,
+                ConferenceLink = conferenceLink,
+                ResourceLink = resourceLink
+            });
+
         return rowsAffected > 0;
     }
 
     public async Task<bool> DeleteAsync(int id)
     {
         using var connection = CreateConnection();
+
         string sql = "DELETE FROM `RealLessons` WHERE Id = @Id";
+
         int rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
         return rowsAffected > 0;
     }

@@ -39,14 +39,55 @@ public class DisciplineRepository : IDisciplineRepository
     public async Task<int> CreateAsync(Discipline discipline)
     {
         using var connection = CreateConnection();
-        string sql = "INSERT INTO `Disciplines` (Name, TotalHours) VALUES (@Name, @TotalHours); SELECT LAST_INSERT_ID();";
+
+        string sql = @"
+        INSERT INTO `Disciplines`
+        (
+            SpecialtyId,
+            Name,
+            TotalHours,
+            LectureHours,
+            PracticalHours,
+            LaboratoryHours,
+            SeminarHours,
+            OtherHours
+        )
+        VALUES
+        (
+            @SpecialtyId,
+            @Name,
+            @TotalHours,
+            @LectureHours,
+            @PracticalHours,
+            @LaboratoryHours,
+            @SeminarHours,
+            @OtherHours
+        );
+
+        SELECT LAST_INSERT_ID();
+    ";
+
         return await connection.ExecuteScalarAsync<int>(sql, discipline);
     }
 
     public async Task<bool> UpdateAsync(Discipline discipline)
     {
         using var connection = CreateConnection();
-        string sql = "UPDATE `Disciplines` SET Name = @Name, TotalHours = @TotalHours WHERE Id = @Id";
+
+        string sql = @"
+        UPDATE `Disciplines`
+        SET
+            SpecialtyId = @SpecialtyId,
+            Name = @Name,
+            TotalHours = @TotalHours,
+            LectureHours = @LectureHours,
+            PracticalHours = @PracticalHours,
+            LaboratoryHours = @LaboratoryHours,
+            SeminarHours = @SeminarHours,
+            OtherHours = @OtherHours
+        WHERE Id = @Id;
+    ";
+
         int rowsAffected = await connection.ExecuteAsync(sql, discipline);
         return rowsAffected > 0;
     }
