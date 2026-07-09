@@ -185,7 +185,8 @@
             LessonDate = lessonDate,
             LessonPosition = lessonPosition,
             WeekDay = (WeekDay)dayValue,
-            WeekProperty = WeekProperty.EveryWeek
+            WeekProperty = WeekProperty.EveryWeek,
+            LessonType = LessonType.Lecture
         };
 
         var response = await Http.PostAsJsonAsync("api/reallessons", newLesson);

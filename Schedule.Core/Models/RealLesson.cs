@@ -15,6 +15,7 @@ public class RealLesson
     public int TeacherId { get; set; }
     public int DisciplineId { get; set; }
     public int? ClassRoomId { get; set; } // Може бути NULL, якщо пара суто дистанційна
+    
     public int SemesterId { get; set; }
 
     // Основні параметри пари
@@ -24,6 +25,7 @@ public class RealLesson
     // Замість int ставимо наші Enums!
     public required WeekDay WeekDay { get; set; }             // День тижня (1 = Пн, 2 = Вт...)
     public required WeekProperty WeekProperty { get; set; }        // 1 = Чисельник, 2 = Знаменник, 0 = Кожний тиждень
+    public required LessonType LessonType { get; set; }
 
     // Ті самі поля для лінків, які викладачі зможуть редагувати
     public string? ConferenceLink { get; set; }  // Посилання на відеоконференцію

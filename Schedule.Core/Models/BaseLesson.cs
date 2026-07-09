@@ -13,6 +13,7 @@ public class BaseLesson
     public int TeacherId { get; set; }
     public int DisciplineId { get; set; }
     public int? ClassRoomId { get; set; }
+    
     public int SemesterId { get; set; }
 
     public int LessonPosition { get; set; }      // Номер пари (1, 2, 3...)
@@ -20,6 +21,7 @@ public class BaseLesson
     // Замість int ставимо наші Enums!
     public required WeekDay WeekDay { get; set; }             // День тижня (1 = Пн, 2 = Вт...)
     public required WeekProperty WeekProperty { get; set; }        // 1 = Чисельник, 2 = Знаменник, 0 = Кожний тиждень
+    public required LessonType LessonType { get; set; }
 
     // Навігаційні властивості для зв'язків
     public Group? Group { get; set; }
