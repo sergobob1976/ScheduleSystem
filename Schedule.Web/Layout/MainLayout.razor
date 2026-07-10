@@ -4,39 +4,63 @@
     <div class="row">
         <div class="col-md-3 col-lg-2 bg-dark min-vh-100 p-3 text-white">
             <h5 class="text-center mb-4 border-bottom pb-2">📅 Розклад АПІ</h5>
+
             <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item mb-2">
+                    <NavLink class="nav-link text-white" href="" Match="NavLinkMatch.All">
+                        🏠 Головна
+                    </NavLink>
+                </li>
+
                 <li class="nav-item mb-2">
                     <NavLink class="nav-link text-white" href="schedule">
                         📅 Розклад занять
                     </NavLink>
                 </li>
-                
+
+                <li class="nav-item mt-3 mb-1 text-uppercase small text-secondary">
+                    Довідники
+                </li>
+
                 <li class="nav-item mb-2">
-                    <NavLink class="nav-link text-white" href="groups" Match="NavLinkMatch.All">
+                    <NavLink class="nav-link text-white" href="groups">
                         🎒 Групи
                     </NavLink>
                 </li>
+
+                <li class="nav-item mb-2">
+                    <NavLink class="nav-link text-white" href="specialties">
+                        🎓 Спеціальності
+                    </NavLink>
+                </li>
+
+                <li class="nav-item mb-2">
+                    <NavLink class="nav-link text-white" href="disciplines">
+                        📚 Дисципліни
+                    </NavLink>
+                </li>
+
                 <li class="nav-item mb-2">
                     <NavLink class="nav-link text-white" href="teachers">
                         👨‍🏫 Викладачі
                     </NavLink>
                 </li>
+
                 <li class="nav-item mb-2">
-                    <NavLink class="nav-link text-white" href="disciplines">
-                        📚 Предмети
+                    <NavLink class="nav-link text-white" href="classrooms">
+                        🏫 Аудиторії
                     </NavLink>
                 </li>
             </ul>
         </div>
 
-        <div class="col-md-9 col-lg-10 p-4 bg-light">
+        <div class="col-md-9 col-lg-10 p-4 bg-light min-vh-100">
             @Body
         </div>
     </div>
 </div>
 
 <style>
-    /* Підсвічування активного пункту меню, коли ми на ньому стоїмо */
     .nav-link.active {
         background-color: #0d6efd !important;
         color: white !important;

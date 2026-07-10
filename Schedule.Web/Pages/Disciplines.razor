@@ -2,90 +2,220 @@
 @using Schedule.Core.Models
 @inject HttpClient Http
 
-<h3 class="mb-4">📚 Довідник предметів (дисциплін)</h3>
+<h3 class="mb-4">📚 Довідник дисциплін</h3>
 
-<div class="card mb-4 col-md-6">
+<div class="card mb-4 shadow-sm">
     <div class="card-body">
-        <h5 class="card-title">Додати новий предмет</h5>
-        <div class="mb-3">
-            <input type="text" class="form-control mb-2" placeholder="Назва предмету" @bind="name" />
-            <input type="number" class="form-control" placeholder="Загальна кількість годин" @bind="hours" />
+        <h5 class="card-title">Додати дисципліну</h5>
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <label class="form-label small fw-bold">Спеціальність</label>
+                <select class="form-select" @bind="selectedSpecialtyId">
+                    <option value="0">-- Оберіть спеціальність --</option>
+                    @if (specialties != null)
+                    {
+                        @foreach (var s in specialties)
+                        {
+                            <option value="@s.Id">@s.Code — @s.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-8">
+                <label class="form-label small fw-bold">Назва дисципліни</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="Наприклад: Об'єктно-орієнтоване програмування"
+                       @bind="name" />
+            </div>
         </div>
-        <button class="btn btn-primary" @onclick="Create">Додати</button>
-        @if (!string.IsNullOrEmpty(error))
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-2">
+                <label class="form-label small">Лекції</label>
+                <input type="number" class="form-control" @bind="lectureHours" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small">Практичні</label>
+                <input type="number" class="form-control" @bind="practicalHours" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small">Лабораторні</label>
+                <input type="number" class="form-control" @bind="laboratoryHours" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small">Семінари</label>
+                <input type="number" class="form-control" @bind="seminarHours" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small">Інші</label>
+                <input type="number" class="form-control" @bind="otherHours" />
+            </div>
+
+            <div class="col-md-2">
+                <label class="form-label small">Усього</label>
+                <input type="number" class="form-control" @bind="totalHours" />
+            </div>
+        </div>
+
+        <button class="btn btn-primary" @onclick="Create">
+            Додати дисципліну
+        </button>
+
+        @if (!string.IsNullOrWhiteSpace(message))
         {
-            <div class="text-danger mt-2">@error</div>
+            <div class="alert alert-info mt-3 mb-0 py-2">@message</div>
         }
     </div>
 </div>
 
 @if (disciplines == null)
 {
-    <p><em>Завантаження...</em></p>
+    <p><em>Завантаження дисциплін...</em></p>
 }
 else if (!disciplines.Any())
 {
-    <p>Предметів поки не додано.</p>
+    <p class="text-muted">Дисциплін поки немає.</p>
 }
 else
 {
-    <table class="table table-striped table-hover col-md-8">
-        <thead class="table-dark">
-            <tr>
-                <th style="width: 10%">ID</th>
-                <th style="width: 60%">Назва предмету</th>
-                <th style="width: 20%">Усього годин</th>
-                <th style="width: 10%">Дії</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var d in disciplines)
-            {
-                <tr>
-                    <td>@d.Id</td>
-                    <td>@d.Name</td>
-                    <td>@(d.TotalHours.HasValue ? d.TotalHours.Value.ToString() : "Не вказано")</td>
-                    <td>
-                        <button class="btn btn-sm btn-danger" @onclick="() => DeleteDiscipline(d.Id)">Видалити</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <span>Список дисциплін</span>
+            <span class="badge bg-primary">Усього: @disciplines.Count</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Спеціальність</th>
+                        <th>Назва</th>
+                        <th>Лекц.</th>
+                        <th>Практ.</th>
+                        <th>Лаб.</th>
+                        <th>Сем.</th>
+                        <th>Інші</th>
+                        <th>Усього</th>
+                        <th class="text-center">Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var d in disciplines.OrderBy(x => GetSpecialtyText(x.SpecialtyId)).ThenBy(x => x.Name))
+                    {
+                        <tr>
+                            <td>@d.Id</td>
+                            <td>@GetSpecialtyText(d.SpecialtyId)</td>
+                            <td>@d.Name</td>
+                            <td>@FormatHours(d.LectureHours)</td>
+                            <td>@FormatHours(d.PracticalHours)</td>
+                            <td>@FormatHours(d.LaboratoryHours)</td>
+                            <td>@FormatHours(d.SeminarHours)</td>
+                            <td>@FormatHours(d.OtherHours)</td>
+                            <td>
+                                <strong>@FormatHours(d.TotalHours)</strong>
+                            </td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => DeleteDiscipline(d.Id)">
+                                    Видалити
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
 }
 
 @code {
     private List<Discipline>? disciplines;
-    private string name = "";
-    private int? hours;
-    private string error = "";
+    private List<Specialty>? specialties;
 
-    protected override async Task OnInitializedAsync() => await Load();
+    private int selectedSpecialtyId = 0;
+    private string name = "";
+
+    private int? lectureHours;
+    private int? practicalHours;
+    private int? laboratoryHours;
+    private int? seminarHours;
+    private int? otherHours;
+    private int? totalHours;
+
+    private string message = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Load();
+    }
 
     private async Task Load()
     {
         try
         {
+            specialties = await Http.GetFromJsonAsync<List<Specialty>>("api/specialties");
             disciplines = await Http.GetFromJsonAsync<List<Discipline>>("api/disciplines");
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            message = $"Помилка завантаження: {ex.Message}";
         }
     }
 
     private async Task Create()
     {
-        if (string.IsNullOrWhiteSpace(name)) return;
-
-        error = "";
-        var item = new Discipline { Name = name, TotalHours = hours };
-        var res = await Http.PostAsJsonAsync("api/disciplines", item);
-        if (res.IsSuccessStatusCode)
+        if (selectedSpecialtyId == 0)
         {
-            name = "";
-            hours = null;
-            await Load();
+            message = "Оберіть спеціальність.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            message = "Назва дисципліни не може бути порожньою.";
+            return;
+        }
+
+        var calculatedTotalHours = totalHours ?? CalculateTotalHours();
+
+        var item = new Discipline
+        {
+            SpecialtyId = selectedSpecialtyId,
+            Name = name.Trim(),
+            LectureHours = lectureHours,
+            PracticalHours = practicalHours,
+            LaboratoryHours = laboratoryHours,
+            SeminarHours = seminarHours,
+            OtherHours = otherHours,
+            TotalHours = calculatedTotalHours
+        };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/disciplines", item);
+
+            if (response.IsSuccessStatusCode)
+            {
+                ClearForm();
+                message = "Дисципліну додано.";
+                await Load();
+            }
+            else
+            {
+                message = "Не вдалося додати дисципліну. Перевірте спеціальність і унікальність назви в межах цієї спеціальності.";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Помилка: {ex.Message}";
         }
     }
 
@@ -94,19 +224,60 @@ else
         try
         {
             var response = await Http.DeleteAsync($"api/disciplines/{id}");
+
             if (response.IsSuccessStatusCode)
             {
-                error = "";
+                message = "Дисципліну видалено.";
                 await Load();
             }
             else
             {
-                error = "Не вдалося видалити предмет. Він використовується в розкладі.";
+                message = "Не вдалося видалити дисципліну. Можливо, вона використовується в розкладі.";
             }
         }
         catch (Exception ex)
         {
-            error = ex.Message;
+            message = $"Помилка: {ex.Message}";
         }
+    }
+
+    private int? CalculateTotalHours()
+    {
+        var sum =
+            (lectureHours ?? 0) +
+            (practicalHours ?? 0) +
+            (laboratoryHours ?? 0) +
+            (seminarHours ?? 0) +
+            (otherHours ?? 0);
+
+        return sum == 0 ? null : sum;
+    }
+
+    private string GetSpecialtyText(int specialtyId)
+    {
+        var specialty = specialties?.FirstOrDefault(x => x.Id == specialtyId);
+
+        if (specialty == null)
+        {
+            return $"ID {specialtyId}";
+        }
+
+        return $"{specialty.Code} — {specialty.Name}";
+    }
+
+    private static string FormatHours(int? hours)
+    {
+        return hours.HasValue ? hours.Value.ToString() : "—";
+    }
+
+    private void ClearForm()
+    {
+        name = "";
+        lectureHours = null;
+        practicalHours = null;
+        laboratoryHours = null;
+        seminarHours = null;
+        otherHours = null;
+        totalHours = null;
     }
 }

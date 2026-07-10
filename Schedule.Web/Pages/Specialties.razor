@@ -1,0 +1,175 @@
+﻿@page "/specialties"
+@using Schedule.Core.Models
+@inject HttpClient Http
+
+<h3 class="mb-4">🎓 Довідник спеціальностей</h3>
+
+<div class="card mb-4 col-md-8 shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title">Додати спеціальність</h5>
+
+        <div class="row g-2">
+            <div class="col-md-3">
+                <input type="text"
+                       class="form-control"
+                       placeholder="Код, напр. F7"
+                       @bind="newCode" />
+            </div>
+
+            <div class="col-md-7">
+                <input type="text"
+                       class="form-control"
+                       placeholder="Назва спеціальності"
+                       @bind="newName" />
+            </div>
+
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" @onclick="CreateSpecialty">
+                    Додати
+                </button>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(message))
+        {
+            <div class="alert alert-info mt-3 mb-0 py-2">@message</div>
+        }
+    </div>
+</div>
+
+@if (specialties == null)
+{
+    <p><em>Завантаження спеціальностей...</em></p>
+}
+else if (!specialties.Any())
+{
+    <p class="text-muted">Спеціальностей поки немає.</p>
+}
+else
+{
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white">
+            Список спеціальностей
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 10%">ID</th>
+                        <th style="width: 20%">Код</th>
+                        <th style="width: 55%">Назва</th>
+                        <th style="width: 15%" class="text-center">Дії</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in specialties)
+                    {
+                        <tr>
+                            <td>@item.Id</td>
+                            <td>
+                                <span class="badge bg-primary">@item.Code</span>
+                            </td>
+                            <td>@item.Name</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => DeleteSpecialty(item.Id)">
+                                    Видалити
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Specialty>? specialties;
+
+    private string newCode = "";
+    private string newName = "";
+    private string message = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSpecialties();
+    }
+
+    private async Task LoadSpecialties()
+    {
+        try
+        {
+            specialties = await Http.GetFromJsonAsync<List<Specialty>>("api/specialties");
+        }
+        catch (Exception ex)
+        {
+            message = $"Помилка завантаження: {ex.Message}";
+        }
+    }
+
+    private async Task CreateSpecialty()
+    {
+        if (string.IsNullOrWhiteSpace(newCode))
+        {
+            message = "Код спеціальності не може бути порожнім.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            message = "Назва спеціальності не може бути порожньою.";
+            return;
+        }
+
+        var specialty = new Specialty
+        {
+            Code = newCode.Trim(),
+            Name = newName.Trim()
+        };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/specialties", specialty);
+
+            if (response.IsSuccessStatusCode)
+            {
+                newCode = "";
+                newName = "";
+                message = "Спеціальність додано.";
+                await LoadSpecialties();
+            }
+            else
+            {
+                message = "Не вдалося додати спеціальність. Можливо, такий код уже існує.";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Помилка: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteSpecialty(int id)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/specialties/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                message = "Спеціальність видалено.";
+                await LoadSpecialties();
+            }
+            else
+            {
+                message = "Не вдалося видалити спеціальність. Можливо, до неї прив'язані дисципліни або групи.";
+            }
+        }
+        catch (Exception ex)
+        {
+            message = $"Помилка: {ex.Message}";
+        }
+    }
+}
