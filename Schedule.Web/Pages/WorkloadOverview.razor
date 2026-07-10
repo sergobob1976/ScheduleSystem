@@ -1,0 +1,1038 @@
+﻿@page "/workload-overview"
+@using System.ComponentModel
+@using System.Reflection
+@using Schedule.Core.Enums
+@using Schedule.Core.Models
+@inject HttpClient Http
+
+<h3 class="mb-2">📈 Контроль навчального навантаження</h3>
+
+<p class="text-muted mb-4">
+    Зведена інформація про навантаження викладачів
+    і залишок годин у групах.
+</p>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row align-items-end g-3">
+            <div class="col-md-6">
+                <label class="form-label fw-bold">
+                    Семестр
+                </label>
+
+                <select class="form-select"
+                        @bind="selectedSemesterId">
+                    <option value="0">
+                        -- Оберіть семестр --
+                    </option>
+
+                    @foreach (var semester in semesters ?? [])
+                    {
+                        <option value="@semester.Id">
+                            @semester.Name
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="col-md-3">
+                <div class="small text-muted">
+                    Викладачів із навантаженням
+                </div>
+
+                <div class="fs-4 fw-bold">
+                    @TeacherRows.Count()
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <div class="small text-muted">
+                    Дисциплін груп
+                </div>
+
+                <div class="fs-4 fw-bold">
+                    @GroupRows.Count()
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (isLoading)
+{
+    <div class="alert alert-info">
+        Завантаження даних...
+    </div>
+}
+else if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">
+        @errorMessage
+    </div>
+}
+else if (selectedSemesterId <= 0)
+{
+    <div class="alert alert-secondary">
+        Оберіть семестр для перегляду навантаження.
+    </div>
+}
+else
+{
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="small text-muted">
+                        Загальний план викладачів
+                    </div>
+
+                    <div class="display-6 fw-bold">
+                        @TotalTeacherPlannedHours
+                    </div>
+
+                    <div class="text-muted">
+                        год.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="small text-muted">
+                        Призначено викладачам
+                    </div>
+
+                    <div class="display-6 fw-bold text-primary">
+                        @TotalTeacherAssignedHours
+                    </div>
+
+                    <div class="text-muted">
+                        год.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="small text-muted">
+                        Залишок викладачів
+                    </div>
+
+                    <div class="display-6 fw-bold @GetRemainingCssClass(TotalTeacherRemainingHours)">
+                        @TotalTeacherRemainingHours
+                    </div>
+
+                    <div class="text-muted">
+                        год.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="small text-muted">
+                        Нерозподілені години груп
+                    </div>
+
+                    <div class="display-6 fw-bold @GetRemainingCssClass(TotalGroupRemainingHours)">
+                        @TotalGroupRemainingHours
+                    </div>
+
+                    <div class="text-muted">
+                        год.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                Навантаження викладачів
+            </h5>
+
+            <span class="badge bg-primary">
+                @TeacherRows.Count() записів
+            </span>
+        </div>
+
+        <div class="card-body border-bottom">
+            <input type="text"
+                   class="form-control"
+                   placeholder="Пошук викладача"
+                   @bind="teacherSearchText"
+                   @bind:event="oninput" />
+        </div>
+
+        <div class="card-body p-0">
+            @if (!FilteredTeacherRows.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    Даних про навантаження викладачів немає.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>
+                                    Викладач
+                                </th>
+
+                                <th>
+                                    Посада
+                                </th>
+
+                                <th class="text-center">
+                                    План
+                                </th>
+
+                                <th class="text-center">
+                                    Розподілено за дисциплінами
+                                </th>
+
+                                <th class="text-center">
+                                    Призначено групам
+                                </th>
+
+                                <th class="text-center">
+                                    Залишок
+                                </th>
+
+                                <th>
+                                    Стан
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var row in FilteredTeacherRows)
+                            {
+                                <tr>
+                                    <td class="fw-bold">
+                                        @row.TeacherName
+                                    </td>
+
+                                    <td>
+                                        @row.Position
+                                    </td>
+
+                                    <td class="text-center">
+                                        @row.PlannedHours
+                                    </td>
+
+                                    <td class="text-center">
+                                        @row.DisciplinePlannedHours
+                                    </td>
+
+                                    <td class="text-center">
+                                        @row.AssignedHours
+                                    </td>
+
+                                    <td class="text-center fw-bold @GetRemainingCssClass(row.RemainingHours)">
+                                        @row.RemainingHours
+                                    </td>
+
+                                    <td>
+                                        <span class="badge @GetStatusBadgeClass(row.RemainingHours)">
+                                            @GetStatusText(row.RemainingHours)
+                                        </span>
+                                    </td>
+                                </tr>
+
+                                @foreach (var disciplineRow in row.Disciplines)
+                                {
+                                    <tr class="table-light">
+                                        <td></td>
+
+                                        <td colspan="2">
+                                            <span class="text-muted">
+                                                ↳
+                                            </span>
+
+                                            @disciplineRow.DisciplineName
+                                        </td>
+
+                                        <td class="text-center">
+                                            @disciplineRow.PlannedHours
+                                        </td>
+
+                                        <td class="text-center">
+                                            @disciplineRow.AssignedHours
+                                        </td>
+
+                                        <td class="text-center fw-bold @GetRemainingCssClass(disciplineRow.RemainingHours)">
+                                            @disciplineRow.RemainingHours
+                                        </td>
+
+                                        <td>
+                                            <span class="badge @GetStatusBadgeClass(disciplineRow.RemainingHours)">
+                                                @GetStatusText(disciplineRow.RemainingHours)
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                Залишок годин у групах
+            </h5>
+
+            <span class="badge bg-primary">
+                @GroupRows.Count() записів
+            </span>
+        </div>
+
+        <div class="card-body border-bottom">
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">
+                        Група
+                    </label>
+
+                    <select class="form-select"
+                            @bind="filterGroupId">
+                        <option value="0">
+                            Усі групи
+                        </option>
+
+                        @foreach (var group in AvailableGroups)
+                        {
+                            <option value="@group.Id">
+                                @group.Name
+                            </option>
+                        }
+                    </select>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label small fw-bold">
+                        Дисципліна
+                    </label>
+
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Пошук дисципліни"
+                           @bind="disciplineSearchText"
+                           @bind:event="oninput" />
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-0">
+            @if (!FilteredGroupRows.Any())
+            {
+                <div class="p-4 text-center text-muted">
+                    Даних про навчальні плани груп немає.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>
+                                    Група
+                                </th>
+
+                                <th>
+                                    Дисципліна
+                                </th>
+
+                                <th>
+                                    Вид заняття
+                                </th>
+
+                                <th class="text-center">
+                                    План
+                                </th>
+
+                                <th class="text-center">
+                                    Призначено
+                                </th>
+
+                                <th class="text-center">
+                                    Залишок
+                                </th>
+
+                                <th>
+                                    Викладачі
+                                </th>
+
+                                <th>
+                                    Стан
+                                </th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            @foreach (var row in FilteredGroupRows)
+                            {
+                                <tr>
+                                    <td class="fw-bold">
+                                        @row.GroupName
+                                    </td>
+
+                                    <td>
+                                        @row.DisciplineName
+                                    </td>
+
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            @GetLessonTypeName(
+                                                row.LessonType)
+                                        </span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        @row.PlannedHours
+                                    </td>
+
+                                    <td class="text-center">
+                                        @row.AssignedHours
+                                    </td>
+
+                                    <td class="text-center fw-bold @GetRemainingCssClass(row.RemainingHours)">
+                                        @row.RemainingHours
+                                    </td>
+
+                                    <td>
+                                        @if (row.TeacherAssignments.Count == 0)
+                                        {
+                                            <span class="text-danger">
+                                                Не призначено
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var assignment in row.TeacherAssignments)
+                                            {
+                                                <div>
+                                                    @assignment.TeacherName —
+                                                    <strong>
+                                                        @assignment.AssignedHours год.
+                                                    </strong>
+                                                </div>
+                                            }
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <span class="badge @GetStatusBadgeClass(row.RemainingHours)">
+                                            @GetStatusText(row.RemainingHours)
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    private List<Semester>? semesters;
+    private List<Group>? groups;
+    private List<Discipline>? disciplines;
+    private List<Teacher>? teachers;
+
+    private List<GroupDiscipline>? groupDisciplines;
+    private List<TeacherSemesterLoad>? teacherSemesterLoads;
+    private List<TeacherDisciplineLoad>? teacherDisciplineLoads;
+    private List<TeachingAssignment>? assignments;
+
+    private int selectedSemesterId;
+    private int filterGroupId;
+
+    private string teacherSearchText = "";
+    private string disciplineSearchText = "";
+    private string errorMessage = "";
+
+    private bool isLoading = true;
+
+    private IEnumerable<TeacherOverviewRow> TeacherRows
+    {
+        get
+        {
+            if (selectedSemesterId <= 0)
+            {
+                return [];
+            }
+
+            return (teacherSemesterLoads ?? [])
+                .Where(
+                    x => x.SemesterId ==
+                         selectedSemesterId)
+                .Select(CreateTeacherOverviewRow)
+                .OrderBy(x => x.TeacherName);
+        }
+    }
+
+    private IEnumerable<TeacherOverviewRow>
+        FilteredTeacherRows
+    {
+        get
+        {
+            var result = TeacherRows;
+
+            if (!string.IsNullOrWhiteSpace(
+                    teacherSearchText))
+            {
+                string value =
+                    teacherSearchText.Trim();
+
+                result = result.Where(
+                    x => x.TeacherName.Contains(
+                        value,
+                        StringComparison.OrdinalIgnoreCase));
+            }
+
+            return result;
+        }
+    }
+
+    private IEnumerable<GroupOverviewRow> GroupRows
+    {
+        get
+        {
+            if (selectedSemesterId <= 0)
+            {
+                return [];
+            }
+
+            var result =
+                new List<GroupOverviewRow>();
+
+            foreach (var groupDiscipline in
+                     (groupDisciplines ?? [])
+                     .Where(
+                         x => x.SemesterId ==
+                              selectedSemesterId))
+            {
+                AddGroupRow(
+                    result,
+                    groupDiscipline,
+                    LessonType.Lecture,
+                    groupDiscipline.LectureHours);
+
+                AddGroupRow(
+                    result,
+                    groupDiscipline,
+                    LessonType.Practical,
+                    groupDiscipline.PracticalHours);
+
+                AddGroupRow(
+                    result,
+                    groupDiscipline,
+                    LessonType.Laboratory,
+                    groupDiscipline.LaboratoryHours);
+
+                AddGroupRow(
+                    result,
+                    groupDiscipline,
+                    LessonType.Seminar,
+                    groupDiscipline.SeminarHours);
+
+                AddGroupRow(
+                    result,
+                    groupDiscipline,
+                    LessonType.Other,
+                    groupDiscipline.OtherHours);
+            }
+
+            return result
+                .OrderBy(x => x.GroupName)
+                .ThenBy(x => x.DisciplineName)
+                .ThenBy(x => x.LessonType);
+        }
+    }
+
+    private IEnumerable<GroupOverviewRow>
+        FilteredGroupRows
+    {
+        get
+        {
+            var result = GroupRows;
+
+            if (filterGroupId > 0)
+            {
+                result = result.Where(
+                    x => x.GroupId ==
+                         filterGroupId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                    disciplineSearchText))
+            {
+                string value =
+                    disciplineSearchText.Trim();
+
+                result = result.Where(
+                    x => x.DisciplineName.Contains(
+                        value,
+                        StringComparison.OrdinalIgnoreCase));
+            }
+
+            return result;
+        }
+    }
+
+    private IEnumerable<Group> AvailableGroups =>
+        (groups ?? [])
+            .Where(
+                group =>
+                    (groupDisciplines ?? [])
+                    .Any(
+                        x =>
+                            x.SemesterId ==
+                            selectedSemesterId
+                            &&
+                            x.GroupId == group.Id))
+            .OrderBy(x => x.Name);
+
+    private int TotalTeacherPlannedHours =>
+        TeacherRows.Sum(x => x.PlannedHours);
+
+    private int TotalTeacherAssignedHours =>
+        TeacherRows.Sum(x => x.AssignedHours);
+
+    private int TotalTeacherRemainingHours =>
+        TeacherRows.Sum(x => x.RemainingHours);
+
+    private int TotalGroupRemainingHours =>
+        GroupRows.Sum(x => x.RemainingHours);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAll();
+    }
+
+    private async Task LoadAll()
+    {
+        isLoading = true;
+        errorMessage = "";
+
+        try
+        {
+            var semestersTask =
+                Http.GetFromJsonAsync<List<Semester>>(
+                    "api/semesters");
+
+            var groupsTask =
+                Http.GetFromJsonAsync<List<Group>>(
+                    "api/groups");
+
+            var disciplinesTask =
+                Http.GetFromJsonAsync<List<Discipline>>(
+                    "api/disciplines");
+
+            var teachersTask =
+                Http.GetFromJsonAsync<List<Teacher>>(
+                    "api/teachers");
+
+            var groupDisciplinesTask =
+                Http.GetFromJsonAsync<
+                    List<GroupDiscipline>>(
+                    "api/groupdisciplines");
+
+            var teacherSemesterLoadsTask =
+                Http.GetFromJsonAsync<
+                    List<TeacherSemesterLoad>>(
+                    "api/teachersemesterloads");
+
+            var teacherDisciplineLoadsTask =
+                Http.GetFromJsonAsync<
+                    List<TeacherDisciplineLoad>>(
+                    "api/teacherdisciplineloads");
+
+            var assignmentsTask =
+                Http.GetFromJsonAsync<
+                    List<TeachingAssignment>>(
+                    "api/teachingassignments");
+
+            await Task.WhenAll(
+                semestersTask,
+                groupsTask,
+                disciplinesTask,
+                teachersTask,
+                groupDisciplinesTask,
+                teacherSemesterLoadsTask,
+                teacherDisciplineLoadsTask,
+                assignmentsTask);
+
+            semesters =
+                semestersTask.Result ?? [];
+
+            groups =
+                groupsTask.Result ?? [];
+
+            disciplines =
+                disciplinesTask.Result ?? [];
+
+            teachers =
+                teachersTask.Result ?? [];
+
+            groupDisciplines =
+                groupDisciplinesTask.Result ?? [];
+
+            teacherSemesterLoads =
+                teacherSemesterLoadsTask.Result ?? [];
+
+            teacherDisciplineLoads =
+                teacherDisciplineLoadsTask.Result ?? [];
+
+            assignments =
+                assignmentsTask.Result ?? [];
+
+            selectedSemesterId =
+                semesters
+                    .OrderByDescending(
+                        x => x.StartDate)
+                    .FirstOrDefault()?
+                    .Id
+                ?? 0;
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Помилка завантаження: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private TeacherOverviewRow CreateTeacherOverviewRow(
+        TeacherSemesterLoad semesterLoad)
+    {
+        var teacher =
+            semesterLoad.Teacher
+            ?? teachers?.FirstOrDefault(
+                x => x.Id ==
+                     semesterLoad.TeacherId);
+
+        var disciplineRows =
+            (teacherDisciplineLoads ?? [])
+            .Where(
+                x =>
+                    x.TeacherSemesterLoadId ==
+                    semesterLoad.Id)
+            .Select(
+                disciplineLoad =>
+                {
+                    int assigned =
+                        GetTeacherDisciplineAssignedHours(
+                            semesterLoad.TeacherId,
+                            semesterLoad.SemesterId,
+                            disciplineLoad.DisciplineId);
+
+                    return new TeacherDisciplineOverviewRow
+                    {
+                        DisciplineName =
+                            disciplineLoad.Discipline?.Name
+                            ?? GetDisciplineName(
+                                disciplineLoad.DisciplineId),
+
+                        PlannedHours =
+                            disciplineLoad.PlannedHours,
+
+                        AssignedHours =
+                            assigned
+                    };
+                })
+            .OrderBy(x => x.DisciplineName)
+            .ToList();
+
+        return new TeacherOverviewRow
+        {
+            TeacherId = semesterLoad.TeacherId,
+
+            TeacherName =
+                teacher?.Name
+                ?? $"ID {semesterLoad.TeacherId}",
+
+            Position =
+                string.IsNullOrWhiteSpace(
+                    teacher?.Position)
+                    ? "—"
+                    : teacher.Position,
+
+            PlannedHours =
+                semesterLoad.PlannedHours,
+
+            DisciplinePlannedHours =
+                disciplineRows.Sum(
+                    x => x.PlannedHours),
+
+            AssignedHours =
+                disciplineRows.Sum(
+                    x => x.AssignedHours),
+
+            Disciplines =
+                disciplineRows
+        };
+    }
+
+    private int GetTeacherDisciplineAssignedHours(
+        int teacherId,
+        int semesterId,
+        int disciplineId)
+    {
+        return (assignments ?? [])
+            .Where(
+                assignment =>
+                {
+                    var groupDiscipline =
+                        GetGroupDiscipline(
+                            assignment.GroupDisciplineId);
+
+                    return assignment.TeacherId ==
+                           teacherId
+                           &&
+                           groupDiscipline != null
+                           &&
+                           groupDiscipline.SemesterId ==
+                           semesterId
+                           &&
+                           groupDiscipline.DisciplineId ==
+                           disciplineId;
+                })
+            .Sum(x => x.AssignedHours);
+    }
+
+    private void AddGroupRow(
+        List<GroupOverviewRow> rows,
+        GroupDiscipline groupDiscipline,
+        LessonType lessonType,
+        int plannedHours)
+    {
+        if (plannedHours <= 0)
+        {
+            return;
+        }
+
+        var relevantAssignments =
+            (assignments ?? [])
+            .Where(
+                x =>
+                    x.GroupDisciplineId ==
+                    groupDiscipline.Id
+                    &&
+                    x.LessonType ==
+                    lessonType)
+            .ToList();
+
+        rows.Add(
+            new GroupOverviewRow
+            {
+                GroupId =
+                    groupDiscipline.GroupId,
+
+                GroupName =
+                    groupDiscipline.Group?.Name
+                    ?? GetGroupName(
+                        groupDiscipline.GroupId),
+
+                DisciplineName =
+                    groupDiscipline.Discipline?.Name
+                    ?? GetDisciplineName(
+                        groupDiscipline.DisciplineId),
+
+                LessonType =
+                    lessonType,
+
+                PlannedHours =
+                    plannedHours,
+
+                AssignedHours =
+                    relevantAssignments.Sum(
+                        x => x.AssignedHours),
+
+                TeacherAssignments =
+                    relevantAssignments
+                    .Select(
+                        x =>
+                            new TeacherAssignmentRow
+                            {
+                                TeacherName =
+                                    x.Teacher?.Name
+                                    ?? GetTeacherName(
+                                        x.TeacherId),
+
+                                AssignedHours =
+                                    x.AssignedHours
+                            })
+                    .OrderBy(x => x.TeacherName)
+                    .ToList()
+            });
+    }
+
+    private GroupDiscipline?
+        GetGroupDiscipline(int id)
+    {
+        return groupDisciplines?
+            .FirstOrDefault(x => x.Id == id);
+    }
+
+    private string GetGroupName(int id)
+    {
+        return groups?
+            .FirstOrDefault(x => x.Id == id)?
+            .Name
+            ?? $"ID {id}";
+    }
+
+    private string GetDisciplineName(int id)
+    {
+        return disciplines?
+            .FirstOrDefault(x => x.Id == id)?
+            .Name
+            ?? $"ID {id}";
+    }
+
+    private string GetTeacherName(int id)
+    {
+        return teachers?
+            .FirstOrDefault(x => x.Id == id)?
+            .Name
+            ?? $"ID {id}";
+    }
+
+    private static string GetLessonTypeName(
+        LessonType lessonType)
+    {
+        var field =
+            typeof(LessonType).GetField(
+                lessonType.ToString());
+
+        var description =
+            field?.GetCustomAttribute<
+                DescriptionAttribute>();
+
+        return description?.Description
+            ?? lessonType.ToString();
+    }
+
+    private static string GetRemainingCssClass(
+        int remaining)
+    {
+        return remaining switch
+        {
+            < 0 => "text-danger",
+            0 => "text-success",
+            _ => "text-primary"
+        };
+    }
+
+    private static string GetStatusBadgeClass(
+        int remaining)
+    {
+        return remaining switch
+        {
+            < 0 => "bg-danger",
+            0 => "bg-success",
+            _ => "bg-warning text-dark"
+        };
+    }
+
+    private static string GetStatusText(
+        int remaining)
+    {
+        return remaining switch
+        {
+            < 0 => "Перевищено",
+            0 => "Розподілено",
+            _ => "Є залишок"
+        };
+    }
+
+    private sealed class TeacherOverviewRow
+    {
+        public int TeacherId { get; set; }
+
+        public string TeacherName { get; set; } =
+            "";
+
+        public string Position { get; set; } =
+            "";
+
+        public int PlannedHours { get; set; }
+
+        public int DisciplinePlannedHours { get; set; }
+
+        public int AssignedHours { get; set; }
+
+        public int RemainingHours =>
+            PlannedHours - AssignedHours;
+
+        public List<TeacherDisciplineOverviewRow>
+            Disciplines
+        { get; set; } = [];
+    }
+
+    private sealed class TeacherDisciplineOverviewRow
+    {
+        public string DisciplineName { get; set; } =
+            "";
+
+        public int PlannedHours { get; set; }
+
+        public int AssignedHours { get; set; }
+
+        public int RemainingHours =>
+            PlannedHours - AssignedHours;
+    }
+
+    private sealed class GroupOverviewRow
+    {
+        public int GroupId { get; set; }
+
+        public string GroupName { get; set; } =
+            "";
+
+        public string DisciplineName { get; set; } =
+            "";
+
+        public LessonType LessonType { get; set; }
+
+        public int PlannedHours { get; set; }
+
+        public int AssignedHours { get; set; }
+
+        public int RemainingHours =>
+            PlannedHours - AssignedHours;
+
+        public List<TeacherAssignmentRow>
+            TeacherAssignments
+        { get; set; } = [];
+    }
+
+    private sealed class TeacherAssignmentRow
+    {
+        public string TeacherName { get; set; } =
+            "";
+
+        public int AssignedHours { get; set; }
+    }
+}
