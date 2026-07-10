@@ -1,78 +1,161 @@
 ﻿@page "/classrooms"
+@using System.Net
+@using System.Net.Http.Json
 @using Schedule.Core.Models
 @inject HttpClient Http
 
 <h3 class="mb-4">🏫 Довідник аудиторій</h3>
 
-<div class="card mb-4 col-md-6 shadow-sm">
-    <div class="card-body">
-        <h5 class="card-title">Додати аудиторію</h5>
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    @(editingId.HasValue
+                        ? "Редагування аудиторії"
+                        : "Нова аудиторія")
+                </h5>
+            </div>
 
-        <div class="input-group">
-            <input type="text"
-                   class="form-control"
-                   placeholder="Назва аудиторії, напр. 205 або Лаб. 3"
-                   @bind="newRoomName" />
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">
+                        Назва аудиторії
+                    </label>
 
-            <button class="btn btn-primary" @onclick="CreateClassRoom">
-                Додати
-            </button>
+                    <input type="text"
+                           class="form-control"
+                           placeholder="Наприклад: 205 або Лаб. 3"
+                           maxlength="50"
+                           @bind="form.Name" />
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary flex-grow-1"
+                            disabled="@isSaving"
+                            @onclick="SaveClassRoom">
+                        @(editingId.HasValue
+                            ? "Зберегти зміни"
+                            : "Додати аудиторію")
+                    </button>
+
+                    @if (editingId.HasValue)
+                    {
+                        <button class="btn btn-outline-secondary"
+                                disabled="@isSaving"
+                                @onclick="CancelEditing">
+                            Скасувати
+                        </button>
+                    }
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(message))
+                {
+                    <div class="alert @messageCssClass mt-3 mb-0">
+                        @message
+                    </div>
+                }
+            </div>
         </div>
+    </div>
 
-        @if (!string.IsNullOrWhiteSpace(message))
-        {
-            <div class="alert alert-info mt-3 mb-0 py-2">@message</div>
-        }
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    Список аудиторій
+                </h5>
+
+                <span class="badge bg-primary">
+                    Усього: @(classRooms?.Count ?? 0)
+                </span>
+            </div>
+
+            <div class="card-body p-0">
+                @if (isLoading)
+                {
+                    <div class="p-4 text-center text-muted">
+                        Завантаження аудиторій...
+                    </div>
+                }
+                else if (classRooms == null ||
+                         classRooms.Count == 0)
+                {
+                    <div class="p-4 text-center text-muted">
+                        Аудиторій поки немає.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 15%">
+                                        ID
+                                    </th>
+
+                                    <th>
+                                        Назва аудиторії
+                                    </th>
+
+                                    <th style="width: 30%"
+                                        class="text-center">
+                                        Дії
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                @foreach (var classRoom in classRooms)
+                                {
+                                    <tr>
+                                        <td>
+                                            @classRoom.Id
+                                        </td>
+
+                                        <td class="fw-bold">
+                                            @classRoom.Name
+                                        </td>
+
+                                        <td class="text-center">
+                                            <div class="btn-group btn-group-sm">
+                                                <button class="btn btn-outline-primary"
+                                                        @onclick="() => StartEditing(classRoom)">
+                                                    Редагувати
+                                                </button>
+
+                                                <button class="btn btn-outline-danger"
+                                                        disabled="@(deletingId == classRoom.Id)"
+                                                        @onclick="() => DeleteClassRoom(classRoom.Id)">
+                                                    Видалити
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
     </div>
 </div>
-
-@if (classRooms == null)
-{
-    <p><em>Завантаження аудиторій...</em></p>
-}
-else if (!classRooms.Any())
-{
-    <p class="text-muted">Аудиторій поки немає.</p>
-}
-else
-{
-    <div class="card shadow-sm col-md-8">
-        <div class="card-header bg-dark text-white">
-            Список аудиторій
-        </div>
-
-        <table class="table table-striped table-hover align-middle mb-0">
-            <thead class="table-light">
-                <tr>
-                    <th style="width: 15%">ID</th>
-                    <th style="width: 65%">Назва</th>
-                    <th style="width: 20%" class="text-center">Дії</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var room in classRooms)
-                {
-                    <tr>
-                        <td>@room.Id</td>
-                        <td>@room.Name</td>
-                        <td class="text-center">
-                            <button class="btn btn-sm btn-outline-danger"
-                                    @onclick="() => DeleteClassRoom(room.Id)">
-                                Видалити
-                            </button>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-}
 
 @code {
     private List<ClassRoom>? classRooms;
 
-    private string newRoomName = "";
+    private ClassRoom form = CreateEmptyForm();
+
+    private int? editingId;
+    private int? deletingId;
+
+    private bool isLoading = true;
+    private bool isSaving;
+
     private string message = "";
+    private string messageCssClass = "alert-info";
 
     protected override async Task OnInitializedAsync()
     {
@@ -81,69 +164,212 @@ else
 
     private async Task LoadClassRooms()
     {
+        isLoading = true;
+
         try
         {
-            classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms");
+            classRooms =
+                await Http.GetFromJsonAsync<List<ClassRoom>>(
+                    "api/classrooms")
+                ?? [];
         }
         catch (Exception ex)
         {
-            message = $"Помилка завантаження: {ex.Message}";
+            ShowError(
+                $"Помилка завантаження: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
-    private async Task CreateClassRoom()
+    private async Task SaveClassRoom()
     {
-        if (string.IsNullOrWhiteSpace(newRoomName))
+        if (string.IsNullOrWhiteSpace(form.Name))
         {
-            message = "Назва аудиторії не може бути порожньою.";
+            ShowError(
+                "Назва аудиторії не може бути порожньою.");
+
             return;
         }
 
-        var room = new ClassRoom
-        {
-            Name = newRoomName.Trim()
-        };
+        isSaving = true;
 
         try
         {
-            var response = await Http.PostAsJsonAsync("api/classrooms", room);
+            form.Name = form.Name.Trim();
 
-            if (response.IsSuccessStatusCode)
+            HttpResponseMessage response;
+
+            if (editingId.HasValue)
             {
-                newRoomName = "";
-                message = "Аудиторію додано.";
-                await LoadClassRooms();
+                form.Id = editingId.Value;
+
+                response =
+                    await Http.PutAsJsonAsync(
+                        $"api/classrooms/{form.Id}",
+                        form);
             }
             else
             {
-                message = "Не вдалося додати аудиторію. Можливо, така аудиторія вже існує.";
+                form.Id = 0;
+
+                response =
+                    await Http.PostAsJsonAsync(
+                        "api/classrooms",
+                        form);
             }
+
+            if (response.IsSuccessStatusCode)
+            {
+                bool wasEditing = editingId.HasValue;
+
+                ResetForm();
+
+                await LoadClassRooms();
+
+                ShowSuccess(
+                    wasEditing
+                        ? "Аудиторію оновлено."
+                        : "Аудиторію додано.");
+
+                return;
+            }
+
+            ShowError(
+                await ReadErrorMessage(
+                    response,
+                    "Не вдалося зберегти аудиторію."));
         }
         catch (Exception ex)
         {
-            message = $"Помилка: {ex.Message}";
+            ShowError($"Помилка: {ex.Message}");
         }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void StartEditing(ClassRoom classRoom)
+    {
+        editingId = classRoom.Id;
+
+        form = new ClassRoom
+        {
+            Id = classRoom.Id,
+            Name = classRoom.Name
+        };
+
+        message = "";
+    }
+
+    private void CancelEditing()
+    {
+        ResetForm();
+        message = "";
     }
 
     private async Task DeleteClassRoom(int id)
     {
+        deletingId = id;
+
         try
         {
-            var response = await Http.DeleteAsync($"api/classrooms/{id}");
+            var response =
+                await Http.DeleteAsync(
+                    $"api/classrooms/{id}");
 
             if (response.IsSuccessStatusCode)
             {
-                message = "Аудиторію видалено.";
+                if (editingId == id)
+                {
+                    ResetForm();
+                }
+
                 await LoadClassRooms();
+
+                ShowSuccess("Аудиторію видалено.");
+
+                return;
             }
-            else
-            {
-                message = "Не вдалося видалити аудиторію. Можливо, вона використовується в розкладі.";
-            }
+
+            ShowError(
+                await ReadErrorMessage(
+                    response,
+                    "Не вдалося видалити аудиторію."));
         }
         catch (Exception ex)
         {
-            message = $"Помилка: {ex.Message}";
+            ShowError($"Помилка: {ex.Message}");
         }
+        finally
+        {
+            deletingId = null;
+        }
+    }
+
+    private void ResetForm()
+    {
+        editingId = null;
+        form = CreateEmptyForm();
+    }
+
+    private static ClassRoom CreateEmptyForm()
+    {
+        return new ClassRoom
+        {
+            Name = ""
+        };
+    }
+
+    private static async Task<string> ReadErrorMessage(
+        HttpResponseMessage response,
+        string fallback)
+    {
+        try
+        {
+            var error =
+                await response.Content
+                    .ReadFromJsonAsync<ApiError>();
+
+            if (!string.IsNullOrWhiteSpace(error?.Message))
+            {
+                return error.Message;
+            }
+        }
+        catch
+        {
+            // Використовуємо стандартне повідомлення.
+        }
+
+        return response.StatusCode switch
+        {
+            HttpStatusCode.Conflict =>
+                "Операцію неможливо виконати через пов'язані дані.",
+
+            HttpStatusCode.BadRequest =>
+                "Перевірте правильність введених даних.",
+
+            _ => fallback
+        };
+    }
+
+    private void ShowSuccess(string text)
+    {
+        message = text;
+        messageCssClass = "alert-success";
+    }
+
+    private void ShowError(string text)
+    {
+        message = text;
+        messageCssClass = "alert-danger";
+    }
+
+    private sealed class ApiError
+    {
+        public string Message { get; set; } = "";
     }
 }

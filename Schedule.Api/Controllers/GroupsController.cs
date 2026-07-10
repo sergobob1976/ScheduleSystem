@@ -1,87 +1,209 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using MySqlConnector;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 
 namespace Schedule.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")] // Наш маршрут буде: api/groups
+[Route("api/[controller]")]
 public class GroupsController : ControllerBase
 {
     private readonly IGroupRepository _groupRepository;
 
-    // Через конструктор .NET автоматично підставить сюди наш GroupRepository,
-    // бо ми зареєстрували його в Program.cs (Dependency Injection)
-    public GroupsController(IGroupRepository groupRepository)
+    public GroupsController(
+        IGroupRepository groupRepository)
     {
         _groupRepository = groupRepository;
     }
 
-    // 1. Отримати всі групи (GET api/groups)
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Group>>> GetAll()
     {
-        var groups = await _groupRepository.GetAllAsync();
+        var groups =
+            await _groupRepository.GetAllAsync();
+
         return Ok(groups);
     }
 
-    // 2. Отримати групу за ID (GET api/groups/5)
-    [HttpGet("{id}")]
+    [HttpGet("{id:int}")]
     public async Task<ActionResult<Group>> GetById(int id)
     {
-        var group = await _groupRepository.GetByIdAsync(id);
+        var group =
+            await _groupRepository.GetByIdAsync(id);
+
         if (group == null)
         {
-            return NotFound(new { Message = $"Групу з ID {id} не знайдено." });
+            return NotFound(new
+            {
+                Message =
+                    $"Групу з ID {id} не знайдено."
+            });
         }
+
         return Ok(group);
     }
 
-    // 3. Створити нову групу (POST api/groups)
     [HttpPost]
-    public async Task<ActionResult<Group>> Create([FromBody] Group group)
+    public async Task<ActionResult<Group>> Create(
+        [FromBody] Group group)
     {
-        if (string.IsNullOrWhiteSpace(group.Name))
+        var validationResult = Validate(group);
+
+        if (validationResult != null)
         {
-            return BadRequest(new { Message = "Назва групи не може бути порожньою." });
+            return validationResult;
         }
 
-        // CreateAsync поверне ID, який MySQL присвоїв групі (AUTO_INCREMENT)
-        var newId = await _groupRepository.CreateAsync(group);
-        group.Id = newId;
+        try
+        {
+            int newId =
+                await _groupRepository.CreateAsync(group);
 
-        // Повертаємо статус 201 Created та посилання на створений ресурс
-        return CreatedAtAction(nameof(GetById), new { id = group.Id }, group);
+            group.Id = newId;
+
+            return CreatedAtAction(
+                nameof(GetById),
+                new { id = group.Id },
+                group);
+        }
+        catch (MySqlException ex)
+            when (ex.Number == 1062)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Група з такою назвою вже існує."
+            });
+        }
     }
 
-    // 4. Оновити групу (PUT api/groups/5)
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(int id, [FromBody] Group group)
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(
+        int id,
+        [FromBody] Group group)
     {
         if (id != group.Id)
         {
-            return BadRequest(new { Message = "ID в URL не збігається з ID в тілі запиту." });
+            return BadRequest(new
+            {
+                Message =
+                    "ID у URL не збігається з ID у тілі запиту."
+            });
         }
 
-        var updated = await _groupRepository.UpdateAsync(group);
-        if (!updated)
+        var current =
+            await _groupRepository.GetByIdAsync(id);
+
+        if (current == null)
         {
-            return NotFound(new { Message = $"Не вдалося оновити. Групу з ID {id} не знайдено." });
+            return NotFound(new
+            {
+                Message =
+                    $"Групу з ID {id} не знайдено."
+            });
         }
 
-        return NoContent(); // Стандартна успішна відповідь без тіла (204)
+        var validationResult = Validate(group);
+
+        if (validationResult != null)
+        {
+            return validationResult;
+        }
+
+        try
+        {
+            bool updated =
+                await _groupRepository.UpdateAsync(group);
+
+            if (!updated)
+            {
+                return NotFound(new
+                {
+                    Message =
+                        $"Не вдалося оновити групу з ID {id}."
+                });
+            }
+
+            return NoContent();
+        }
+        catch (MySqlException ex)
+            when (ex.Number == 1062)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Група з такою назвою вже існує."
+            });
+        }
     }
 
-    // 5. Видалити групу (DELETE api/groups/5)
-    [HttpDelete("{id}")]
+    [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _groupRepository.DeleteAsync(id);
-        if (!deleted)
+        var group =
+            await _groupRepository.GetByIdAsync(id);
+
+        if (group == null)
         {
-            return NotFound(new { Message = $"Не вдалося видалити. Групу з ID {id} не знайдено." });
+            return NotFound(new
+            {
+                Message =
+                    $"Групу з ID {id} не знайдено."
+            });
         }
 
-        return NoContent();
+        try
+        {
+            bool deleted =
+                await _groupRepository.DeleteAsync(id);
+
+            if (!deleted)
+            {
+                return NotFound(new
+                {
+                    Message =
+                        $"Не вдалося видалити групу з ID {id}."
+                });
+            }
+
+            return NoContent();
+        }
+        catch (MySqlException ex)
+            when (ex.Number == 1451)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Неможливо видалити групу, оскільки " +
+                    "вона вже використовується у дисциплінах, " +
+                    "навантаженні або розкладі."
+            });
+        }
+    }
+
+    private ActionResult? Validate(Group group)
+    {
+        if (string.IsNullOrWhiteSpace(group.Name))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Назва групи не може бути порожньою."
+            });
+        }
+
+        group.Name = group.Name.Trim();
+
+        if (group.Name.Length > 50)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Назва групи не може містити більше 50 символів."
+            });
+        }
+
+        return null;
     }
 }
