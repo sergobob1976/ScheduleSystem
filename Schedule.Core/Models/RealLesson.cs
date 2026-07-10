@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Text;
-using Schedule.Core.Enums;
+﻿using Schedule.Core.Enums;
 
 namespace Schedule.Core.Models;
 
@@ -10,31 +6,58 @@ public class RealLesson
 {
     public int Id { get; set; }
 
-    // Зовнішні ключі для бази даних
+    /// <summary>
+    /// Конкретне затверджене призначення:
+    /// викладач + група + дисципліна + семестр + вид заняття.
+    ///
+    /// Поки nullable для сумісності зі старими записами.
+    /// </summary>
+    public int? TeachingAssignmentId { get; set; }
+
+    /*
+     * Старі зовнішні ключі тимчасово залишаємо.
+     * Вони потрібні, поки репозиторії та UI розкладу
+     * повністю не переведені на TeachingAssignment.
+     */
     public int GroupId { get; set; }
+
     public int TeacherId { get; set; }
+
     public int DisciplineId { get; set; }
-    public int? ClassRoomId { get; set; } // Може бути NULL, якщо пара суто дистанційна
-    
+
+    public int? ClassRoomId { get; set; }
+
     public int SemesterId { get; set; }
 
-    // Основні параметри пари
-    public DateTime LessonDate { get; set; }     // Дата (наприклад, 2026-09-15)
-    public int LessonPosition { get; set; }      // Номер пари (1, 2, 3...)
-    
-    // Замість int ставимо наші Enums!
-    public required WeekDay WeekDay { get; set; }             // День тижня (1 = Пн, 2 = Вт...)
-    public required WeekProperty WeekProperty { get; set; }        // 1 = Чисельник, 2 = Знаменник, 0 = Кожний тиждень
+    /// <summary>
+    /// Фактична дата проведення заняття.
+    /// </summary>
+    public DateTime LessonDate { get; set; }
+
+    /// <summary>
+    /// Номер пари.
+    /// </summary>
+    public int LessonPosition { get; set; }
+
+    public required WeekDay WeekDay { get; set; }
+
+    public required WeekProperty WeekProperty { get; set; }
+
     public required LessonType LessonType { get; set; }
 
-    // Ті самі поля для лінків, які викладачі зможуть редагувати
-    public string? ConferenceLink { get; set; }  // Посилання на відеоконференцію
-    public string? ResourceLink { get; set; }    // Посилання на матеріали
+    public string? ConferenceLink { get; set; }
 
-    // Навігаційні властивості (для красивого виводу JSON в MAUI)
+    public string? ResourceLink { get; set; }
+
+    public TeachingAssignment? TeachingAssignment { get; set; }
+
     public Group? Group { get; set; }
+
     public Teacher? Teacher { get; set; }
+
     public Discipline? Discipline { get; set; }
+
     public ClassRoom? ClassRoom { get; set; }
+
     public Semester? Semester { get; set; }
 }
