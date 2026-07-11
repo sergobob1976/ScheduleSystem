@@ -33,7 +33,11 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
 <div class="card shadow-sm"><div class="card-header bg-white d-flex justify-content-between"><strong>Заняття вибраного тижня</strong><span class="badge bg-primary">@lessons.Count</span></div>
 <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Дата</th><th>Пара</th><th>Група</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Стан</th></tr></thead>
 <tbody>@if (lessons.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-4">Занять немає.</td></tr> }
-else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM.yyyy")</td><td>@item.LessonPosition</td><td>@item.Group?.Name</td><td>@item.Discipline?.Name</td><td>@item.Teacher?.Name</td><td>@(item.ClassRoom?.Name ?? "—")</td><td>@GetStatusName(item.Status)</td></tr> } }</tbody></table></div></div>
+else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM.yyyy")</td><td>@item.LessonPosition</td><td>@item.Group?.Name</td><td>@item.Discipline?.Name</td><td>@item.Teacher?.Name</td><td>@(item.ClassRoom?.Name ?? "—")</td><td>
+    <select class="form-select form-select-sm status-select @GetStatusClass(item.Status)" value="@((int)item.Status)" @onchange="args => ChangeStatus(item, args)">
+        <option value="0">Заплановано</option><option value="1">Проведено</option><option value="2">Скасовано</option>
+    </select>
+</td></tr> } }</tbody></table></div></div>
 
 @code {
     private List<Semester> semesters = [];
@@ -56,6 +60,15 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; }
         await LoadWeeks(); weekStart = week.WeekStartDate.ToString("yyyy-MM-dd"); await LoadSchedule(); successMessage = "Тиждень успішно перенесено до реального розкладу.";
     }
+    private async Task ChangeStatus(RealLesson lesson, ChangeEventArgs args)
+    {
+        if (!int.TryParse(args.Value?.ToString(), out var value) || !Enum.IsDefined(typeof(RealLessonStatus), value)) return;
+        var status = (RealLessonStatus)value;
+        var response = await Http.PatchAsJsonAsync($"api/RealLessons/{lesson.Id}/status", new UpdateRealLessonStatusRequest { Status = status });
+        if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); await LoadSchedule(); return; }
+        lesson.Status = status; errorMessage = ""; successMessage = $"Стан заняття змінено на «{GetStatusName(status)}».";
+    }
     private static async Task<string> ReadMessage(HttpResponseMessage response) { var text = await response.Content.ReadAsStringAsync(); try { using var json = JsonDocument.Parse(text); if (json.RootElement.TryGetProperty("message", out var value)) return value.GetString() ?? "Операцію не виконано."; } catch (JsonException) { } return text; }
     private static string GetStatusName(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "Проведено", RealLessonStatus.Cancelled => "Скасовано", _ => "Заплановано" };
+    private static string GetStatusClass(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "border-success text-success", RealLessonStatus.Cancelled => "border-danger text-danger", _ => "border-secondary" };
 }

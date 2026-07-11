@@ -91,3 +91,4 @@ code {
 .schedule-grid { min-width: 1100px; }
 .schedule-grid th { white-space: nowrap; }
 .schedule-cell { min-width: 145px; height: 92px; vertical-align: top; background: #fff; }
+.status-select { min-width: 135px; font-weight: 600; }
