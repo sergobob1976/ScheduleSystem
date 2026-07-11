@@ -5,6 +5,7 @@ using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 using Schedule.Core.Services;
 using Schedule.Core.Extensions;
+using Schedule.Core.Constants;
 using MySqlConnector;
 
 namespace Schedule.Api.Controllers;
@@ -1054,7 +1055,8 @@ public class RealLessonsController : ControllerBase
                 Message =
                     "Обрана група вже має заняття " +
                     "на цю дату й пару.",
-                ConflictCode = "GROUP",
+                ConflictCode =
+                    ScheduleConflictCodes.Group,
                 ConflictName = "Група",
                 ConflictingLessonId =
                     groupConflict.Id
@@ -1074,7 +1076,8 @@ public class RealLessonsController : ControllerBase
                 Message =
                     "Обраний викладач уже проводить " +
                     "інше заняття на цю дату й пару.",
-                ConflictCode = "TEACHER",
+                ConflictCode =
+                    ScheduleConflictCodes.Teacher,
                 ConflictName = "Викладач",
                 ConflictingLessonId =
                     teacherConflict.Id
@@ -1096,7 +1099,8 @@ public class RealLessonsController : ControllerBase
                     Message =
                         "Обрана аудиторія вже зайнята " +
                         "на цю дату й пару.",
-                    ConflictCode = "CLASS_ROOM",
+                    ConflictCode =
+                        ScheduleConflictCodes.ClassRoom,
                     ConflictName = "Аудиторія",
                     ConflictingLessonId =
                         classRoomConflict.Id

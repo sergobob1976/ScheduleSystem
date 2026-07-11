@@ -403,7 +403,8 @@ public class BaseLessonsController : ControllerBase
                 Message =
                     "Обрана група вже має заняття " +
                     "в цей день і на цій парі.",
-                ConflictCode = "GROUP",
+                ConflictCode =
+                    ScheduleConflictCodes.Group,
                 ConflictName = "Група",
                 ConflictingLessonId =
                     groupConflict.Id
@@ -424,7 +425,8 @@ public class BaseLessonsController : ControllerBase
                     "Обраний викладач уже проводить " +
                     "інше заняття в цей день і " +
                     "на цій парі.",
-                ConflictCode = "TEACHER",
+                ConflictCode =
+                    ScheduleConflictCodes.Teacher,
                 ConflictName = "Викладач",
                 ConflictingLessonId =
                     teacherConflict.Id
@@ -446,7 +448,8 @@ public class BaseLessonsController : ControllerBase
                     Message =
                         "Обрана аудиторія вже зайнята " +
                         "в цей день і на цій парі.",
-                    ConflictCode = "CLASS_ROOM",
+                    ConflictCode =
+                        ScheduleConflictCodes.ClassRoom,
                     ConflictName = "Аудиторія",
                     ConflictingLessonId =
                         classRoomConflict.Id
