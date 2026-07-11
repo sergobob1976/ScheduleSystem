@@ -393,7 +393,19 @@ public class DatabaseInitializer
                     (`GroupId`, `LessonDate`),
 
                 INDEX `IX_RealLessons_Teacher_Date`
-                    (`TeacherId`, `LessonDate`)
+                    (`TeacherId`, `LessonDate`),
+
+                UNIQUE KEY
+                    `UX_RealLessons_Group_Date_Position`
+                    (`GroupId`, `LessonDate`, `LessonPosition`),
+
+                UNIQUE KEY
+                    `UX_RealLessons_Teacher_Date_Position`
+                    (`TeacherId`, `LessonDate`, `LessonPosition`),
+
+                UNIQUE KEY
+                    `UX_RealLessons_ClassRoom_Date_Position`
+                    (`ClassRoomId`, `LessonDate`, `LessonPosition`)
             )
             ENGINE=InnoDB
             DEFAULT CHARSET=utf8mb4
@@ -546,6 +558,39 @@ public class DatabaseInitializer
             CREATE INDEX
                 `IX_RealLessons_TeachingAssignment`
             ON `RealLessons` (`TeachingAssignmentId`);
+            """);
+
+        EnsureIndex(
+            connection,
+            "RealLessons",
+            "UX_RealLessons_Group_Date_Position",
+            """
+            CREATE UNIQUE INDEX
+                `UX_RealLessons_Group_Date_Position`
+            ON `RealLessons`
+                (`GroupId`, `LessonDate`, `LessonPosition`);
+            """);
+
+        EnsureIndex(
+            connection,
+            "RealLessons",
+            "UX_RealLessons_Teacher_Date_Position",
+            """
+            CREATE UNIQUE INDEX
+                `UX_RealLessons_Teacher_Date_Position`
+            ON `RealLessons`
+                (`TeacherId`, `LessonDate`, `LessonPosition`);
+            """);
+
+        EnsureIndex(
+            connection,
+            "RealLessons",
+            "UX_RealLessons_ClassRoom_Date_Position",
+            """
+            CREATE UNIQUE INDEX
+                `UX_RealLessons_ClassRoom_Date_Position`
+            ON `RealLessons`
+                (`ClassRoomId`, `LessonDate`, `LessonPosition`);
             """);
 
         EnsureIndex(

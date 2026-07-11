@@ -5,6 +5,7 @@ using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 using Schedule.Core.Services;
 using Schedule.Core.Extensions;
+using MySqlConnector;
 
 namespace Schedule.Api.Controllers;
 
@@ -366,8 +367,24 @@ public class RealLessonsController : ControllerBase
             return conflictResult;
         }
 
-        int newId =
-            await _lessonRepository.CreateAsync(lesson);
+        int newId;
+
+        try
+        {
+            newId =
+                await _lessonRepository.CreateAsync(
+                    lesson);
+        }
+        catch (MySqlException ex)
+            when (ex.Number == 1062)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Неможливо створити заняття через " +
+                    "конфлікт групи, викладача або аудиторії."
+            });
+        }
 
         var created =
             await _lessonRepository.GetByIdAsync(newId);
@@ -568,13 +585,29 @@ public class RealLessonsController : ControllerBase
             return existingConflictResult;
         }
 
-        var transferResult =
-            await _lessonRepository.TransferWeekAsync(
-                request.SemesterId,
-                weekStartDate,
-                weekEndDate,
-                request.WeekProperty,
-                realLessons);
+        TransferRealLessonWeekResult transferResult;
+
+        try
+        {
+            transferResult =
+                await _lessonRepository.TransferWeekAsync(
+                    request.SemesterId,
+                    weekStartDate,
+                    weekEndDate,
+                    request.WeekProperty,
+                    realLessons);
+        }
+        catch (MySqlException ex)
+            when (ex.Number == 1062)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Перенесення неможливе через " +
+                    "конфлікт групи, викладача або аудиторії " +
+                    "в реальному розкладі."
+            });
+        }
 
         if (transferResult ==
             TransferRealLessonWeekResult
@@ -643,8 +676,24 @@ public class RealLessonsController : ControllerBase
             return conflictResult;
         }
 
-        bool updated =
-            await _lessonRepository.UpdateAsync(lesson);
+        bool updated;
+
+        try
+        {
+            updated =
+                await _lessonRepository.UpdateAsync(
+                    lesson);
+        }
+        catch (MySqlException ex)
+            when (ex.Number == 1062)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Неможливо оновити заняття через " +
+                    "конфлікт групи, викладача або аудиторії."
+            });
+        }
 
         if (!updated)
         {
