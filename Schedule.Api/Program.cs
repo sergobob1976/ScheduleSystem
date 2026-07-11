@@ -48,6 +48,10 @@ builder.Services.AddScoped<
     RealLessonRepository>();
 
 builder.Services.AddScoped<
+    IRealLessonReportRepository,
+    RealLessonReportRepository>();
+
+builder.Services.AddScoped<
     IBaseLessonRepository,
     BaseLessonRepository>();
 
