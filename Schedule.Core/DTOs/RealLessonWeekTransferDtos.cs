@@ -52,3 +52,32 @@ public class TransferredRealLessonWeekItem
 
     public DateTime CreatedAt { get; set; }
 }
+
+public class RealLessonTransferWeekOption
+{
+    public int WeekNumber { get; set; }
+
+    public DateTime WeekStartDate { get; set; }
+
+    public DateTime WeekEndDate { get; set; }
+
+    public DateTime ActiveStartDate { get; set; }
+
+    public DateTime ActiveEndDate { get; set; }
+
+    public WeekProperty RecommendedWeekProperty
+    { get; set; }
+
+    public string RecommendedWeekPropertyName
+    { get; set; } = string.Empty;
+
+    public bool IsTransferred { get; set; }
+
+    public WeekProperty? TransferredWeekProperty
+    { get; set; }
+
+    public string? TransferredWeekPropertyName
+    { get; set; }
+
+    public int TransferredLessonCount { get; set; }
+}

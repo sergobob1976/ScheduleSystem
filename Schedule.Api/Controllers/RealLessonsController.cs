@@ -137,6 +137,93 @@ public class RealLessonsController : ControllerBase
         return Ok(weeks);
     }
 
+    [HttpGet(
+        "transfer-week-options/semester/{semesterId:int}")]
+    public async Task<
+        ActionResult<IEnumerable<
+            RealLessonTransferWeekOption>>>
+        GetTransferWeekOptions(int semesterId)
+    {
+        if (semesterId <= 0)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Потрібно обрати семестр."
+            });
+        }
+
+        var semester =
+            await _semesterRepository.GetByIdAsync(
+                semesterId);
+
+        if (semester == null)
+        {
+            return NotFound(new
+            {
+                Message =
+                    $"Семестр з ID {semesterId} " +
+                    "не знайдено."
+            });
+        }
+
+        var transferredWeeks =
+            (
+                await _lessonRepository
+                    .GetTransferredWeeksAsync(semesterId)
+            )
+            .ToDictionary(
+                week => week.WeekStartDate.Date);
+
+        var options =
+            new List<RealLessonTransferWeekOption>();
+
+        foreach (var calendarWeek in
+                 SemesterCalendar.GetWeeks(semester))
+        {
+            transferredWeeks.TryGetValue(
+                calendarWeek.WeekStartDate.Date,
+                out var transferredWeek);
+
+            options.Add(
+                new RealLessonTransferWeekOption
+                {
+                    WeekNumber =
+                        calendarWeek.WeekNumber,
+                    WeekStartDate =
+                        calendarWeek.WeekStartDate,
+                    WeekEndDate =
+                        calendarWeek.WeekEndDate,
+                    ActiveStartDate =
+                        calendarWeek.WeekStartDate <
+                        semester.StartDate.Date
+                            ? semester.StartDate.Date
+                            : calendarWeek.WeekStartDate,
+                    ActiveEndDate =
+                        calendarWeek.WeekEndDate >
+                        semester.EndDate.Date
+                            ? semester.EndDate.Date
+                            : calendarWeek.WeekEndDate,
+                    RecommendedWeekProperty =
+                        calendarWeek.WeekProperty,
+                    RecommendedWeekPropertyName =
+                        calendarWeek.WeekProperty
+                            .ToUkranianString(),
+                    IsTransferred =
+                        transferredWeek != null,
+                    TransferredWeekProperty =
+                        transferredWeek?.WeekProperty,
+                    TransferredWeekPropertyName =
+                        transferredWeek?.WeekProperty
+                            .ToUkranianString(),
+                    TransferredLessonCount =
+                        transferredWeek?.LessonCount ?? 0
+                });
+        }
+
+        return Ok(options);
+    }
+
     [HttpGet("group/{groupId:int}/date/{date:datetime}")]
     public async Task<ActionResult<IEnumerable<RealLesson>>>
         GetByGroupAndDate(
