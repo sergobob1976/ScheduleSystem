@@ -1,6 +1,7 @@
 @page "/base-schedule"
 @using Schedule.Core.DTOs
 @using Schedule.Core.Models
+@using Schedule.Core.Enums
 @inject HttpClient Http
 
 <h1 class="h3 mb-3">Базовий розклад</h1>
@@ -23,6 +24,46 @@
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
 else if (data is not null)
 {
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <div class="btn-group" role="group" aria-label="Тип тижня">
+                <button class="btn @(selectedWeek == WeekProperty.Numerator ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="() => selectedWeek = WeekProperty.Numerator">Чисельник</button>
+                <button class="btn @(selectedWeek == WeekProperty.Denominator ? "btn-primary" : "btn-outline-primary")"
+                        @onclick="() => selectedWeek = WeekProperty.Denominator">Знаменник</button>
+            </div>
+            <span class="text-muted small">Заняття «кожний тиждень» показані в обох вкладках</span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0 schedule-grid">
+                <thead class="table-light"><tr><th class="text-center">Пара</th>
+                    @foreach (var day in weekDays) { <th>@GetDayName(day)</th> }
+                </tr></thead>
+                <tbody>
+                    @for (var position = 1; position <= 8; position++)
+                    {
+                        var currentPosition = position;
+                        <tr><th class="text-center table-light">@currentPosition</th>
+                            @foreach (var day in weekDays)
+                            {
+                                var lesson = GetLesson(day, currentPosition);
+                                <td class="schedule-cell">
+                                    @if (lesson is not null)
+                                    {
+                                        <div class="fw-semibold">@lesson.Discipline?.Name</div>
+                                        <div class="small text-muted">@lesson.Teacher?.Name</div>
+                                        @if (lesson.ClassRoom is not null) { <span class="badge bg-light text-dark border">@lesson.ClassRoom.Name</span> }
+                                        @if (lesson.WeekProperty == WeekProperty.EveryWeek) { <span class="badge bg-info text-dark ms-1">Щотижня</span> }
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="h5 mb-0">@data.GroupName · @data.SemesterName</h2>
         <span class="badge bg-secondary">@data.AcademicHoursPerLesson академічні години на пару</span>
@@ -41,6 +82,9 @@ else if (data is not null)
     private List<Semester> semesters = [];
     private List<Group> groups = [];
     private BaseScheduleBuilderResponse? data;
+    private List<BaseLesson> baseLessons = [];
+    private readonly WeekDay[] weekDays = Enum.GetValues<WeekDay>();
+    private WeekProperty selectedWeek = WeekProperty.Numerator;
     private int semesterId;
     private int groupId;
     private bool isLoading;
@@ -56,8 +100,27 @@ else if (data is not null)
     {
         if (semesterId <= 0 || groupId <= 0) { errorMessage = "Оберіть семестр і групу."; return; }
         isLoading = true; errorMessage = "";
-        try { data = await Http.GetFromJsonAsync<BaseScheduleBuilderResponse>($"api/BaseScheduleBuilder/semester/{semesterId}/group/{groupId}"); }
+        try
+        {
+            var dataTask = Http.GetFromJsonAsync<BaseScheduleBuilderResponse>($"api/BaseScheduleBuilder/semester/{semesterId}/group/{groupId}");
+            var lessonsTask = Http.GetFromJsonAsync<List<BaseLesson>>($"api/BaseLessons/group/{groupId}");
+            await Task.WhenAll(dataTask, lessonsTask);
+            data = dataTask.Result;
+            baseLessons = (lessonsTask.Result ?? []).Where(x => x.SemesterId == semesterId).ToList();
+        }
         catch (Exception ex) { errorMessage = $"Не вдалося завантажити базовий розклад: {ex.Message}"; }
         finally { isLoading = false; }
     }
+
+    private BaseLesson? GetLesson(WeekDay day, int position) =>
+        baseLessons.FirstOrDefault(x => x.WeekDay == day && x.LessonPosition == position &&
+            (x.WeekProperty == WeekProperty.EveryWeek || x.WeekProperty == selectedWeek));
+
+    private static string GetDayName(WeekDay day) => day switch
+    {
+        WeekDay.Monday => "Понеділок", WeekDay.Tuesday => "Вівторок",
+        WeekDay.Wednesday => "Середа", WeekDay.Thursday => "Четвер",
+        WeekDay.Friday => "П’ятниця", WeekDay.Saturday => "Субота",
+        WeekDay.Sunday => "Неділя", _ => "—"
+    };
 }
