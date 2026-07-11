@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Schedule.Core.DTOs;
 using Schedule.Core.Interfaces;
+using Schedule.Core.Constants;
 
 namespace Schedule.Api.Controllers;
 
@@ -9,8 +10,6 @@ namespace Schedule.Api.Controllers;
 public class RealLessonReportsController
     : ControllerBase
 {
-    private const int AcademicHoursPerLesson = 2;
-
     private readonly IRealLessonReportRepository
         _reportRepository;
 
@@ -98,7 +97,8 @@ public class RealLessonReportsController
                         semesterId,
                         groupId,
                         actualReportDate,
-                        AcademicHoursPerLesson)
+                        ScheduleConstants
+                            .AcademicHoursPerLesson)
             ).ToList();
 
         return Ok(new RealLessonHoursReportResponse
@@ -109,7 +109,8 @@ public class RealLessonReportsController
             GroupName = group.Name,
             ReportDate = actualReportDate,
             AcademicHoursPerLesson =
-                AcademicHoursPerLesson,
+                ScheduleConstants
+                    .AcademicHoursPerLesson,
             Disciplines = disciplines
         });
     }
@@ -179,7 +180,8 @@ public class RealLessonReportsController
                         semesterId,
                         teacherId,
                         actualReportDate,
-                        AcademicHoursPerLesson)
+                        ScheduleConstants
+                            .AcademicHoursPerLesson)
             ).ToList();
 
         return Ok(new TeacherLessonHoursReportResponse
@@ -190,7 +192,8 @@ public class RealLessonReportsController
             TeacherName = teacher.Name,
             ReportDate = actualReportDate,
             AcademicHoursPerLesson =
-                AcademicHoursPerLesson,
+                ScheduleConstants
+                    .AcademicHoursPerLesson,
             Disciplines = disciplines
         });
     }

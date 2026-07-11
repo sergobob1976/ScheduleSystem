@@ -4,6 +4,7 @@ using Schedule.Core.Enums;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 using Schedule.Core.Services;
+using Schedule.Core.Constants;
 
 namespace Schedule.Api.Controllers;
 
@@ -12,8 +13,6 @@ namespace Schedule.Api.Controllers;
 public class BaseScheduleBuilderController
     : ControllerBase
 {
-    private const int AcademicHoursPerLesson = 2;
-
     private readonly ISemesterRepository
         _semesterRepository;
 
@@ -162,7 +161,8 @@ public class BaseScheduleBuilderController
                     group.Name,
 
                 AcademicHoursPerLesson =
-                    AcademicHoursPerLesson
+                    ScheduleConstants
+                        .AcademicHoursPerLesson
             };
 
         foreach (var groupDiscipline
@@ -227,7 +227,8 @@ public class BaseScheduleBuilderController
 
                 int scheduledHours =
                     scheduledLessonCount *
-                    AcademicHoursPerLesson;
+                    ScheduleConstants
+                        .AcademicHoursPerLesson;
 
                 int remainingHours =
                     Math.Max(

@@ -3,6 +3,7 @@ using Schedule.Core.Enums;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 using Schedule.Core.Services;
+using Schedule.Core.Constants;
 
 namespace Schedule.Api.Controllers;
 
@@ -10,8 +11,6 @@ namespace Schedule.Api.Controllers;
 [Route("api/[controller]")]
 public class BaseLessonsController : ControllerBase
 {
-    private const int AcademicHoursPerLesson = 2;
-
     private readonly IBaseLessonRepository
         _baseLessonRepository;
 
@@ -591,6 +590,7 @@ public class BaseLessonsController : ControllerBase
         return SemesterCalendar.CountOccurrences(
                    semester,
                    lesson) *
-               AcademicHoursPerLesson;
+               ScheduleConstants
+                   .AcademicHoursPerLesson;
     }
 }

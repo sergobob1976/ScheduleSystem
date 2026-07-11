@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Schedule.Core.DTOs;
 using Schedule.Core.Interfaces;
+using Schedule.Core.Constants;
 
 namespace Schedule.Api.Controllers;
 
@@ -9,8 +10,6 @@ namespace Schedule.Api.Controllers;
 public class BaseScheduleReportsController
     : ControllerBase
 {
-    private const int AcademicHoursPerLesson = 2;
-
     private readonly IBaseScheduleReportRepository
         _reportRepository;
 
@@ -50,7 +49,8 @@ public class BaseScheduleReportsController
             await _reportRepository.GetTeacherHoursAsync(
                 semesterId,
                 teacherId,
-                AcademicHoursPerLesson);
+                ScheduleConstants
+                    .AcademicHoursPerLesson);
 
         if (report == null)
         {
