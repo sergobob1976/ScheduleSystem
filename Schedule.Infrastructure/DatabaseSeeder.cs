@@ -14,6 +14,7 @@ public static class DatabaseSeeder
         {
             SeedReferenceData(connection, transaction);
             SeedAcademicData(connection, transaction);
+            SeedBaseSchedule(connection, transaction);
             SeedLoads(connection, transaction);
 
             transaction.Commit();
@@ -534,6 +535,222 @@ public static class DatabaseSeeder
 
         connection.Execute(
             disciplineLoadsSql,
+            transaction: transaction);
+    }
+
+    private static void SeedBaseSchedule(
+        IDbConnection connection,
+        IDbTransaction transaction)
+    {
+        const string sql = """
+            INSERT INTO `BaseLessons`
+            (
+                `TeachingAssignmentId`,
+                `GroupId`,
+                `TeacherId`,
+                `DisciplineId`,
+                `ClassRoomId`,
+                `SemesterId`,
+                `LessonPosition`,
+                `WeekDay`,
+                `WeekProperty`,
+                `LessonType`
+            )
+            SELECT
+                ta.`Id`,
+                g.`Id`,
+                teacher.`Id`,
+                discipline.`Id`,
+                room.`Id`,
+                semester.`Id`,
+                seed.`LessonPosition`,
+                seed.`WeekDay`,
+                seed.`WeekProperty`,
+                seed.`LessonType`
+            FROM
+            (
+                SELECT
+                    'ІПЗ-21' AS `GroupName`,
+                    'Об''єктно-орієнтоване програмування'
+                        AS `DisciplineName`,
+                    'Іваненко Олександр Петрович'
+                        AS `TeacherName`,
+                    1 AS `LessonType`,
+                    '101' AS `ClassRoomName`,
+                    1 AS `WeekDay`,
+                    1 AS `LessonPosition`,
+                    0 AS `WeekProperty`
+
+                UNION ALL
+
+                SELECT
+                    'ІПЗ-21',
+                    'Об''єктно-орієнтоване програмування',
+                    'Коваль Андрій Ігорович',
+                    3,
+                    'Комп''ютерна лабораторія 1',
+                    2,
+                    1,
+                    1
+
+                UNION ALL
+
+                SELECT
+                    'ІПЗ-21',
+                    'Бази даних',
+                    'Петренко Марія Василівна',
+                    1,
+                    '101',
+                    1,
+                    2,
+                    0
+
+                UNION ALL
+
+                SELECT
+                    'ІПЗ-21',
+                    'Бази даних',
+                    'Бондар Сергій Миколайович',
+                    3,
+                    'Комп''ютерна лабораторія 1',
+                    3,
+                    1,
+                    2
+
+                UNION ALL
+
+                SELECT
+                    'ІПЗ-21',
+                    'Вебпрограмування',
+                    'Шевченко Наталія Олегівна',
+                    1,
+                    '201',
+                    4,
+                    1,
+                    1
+
+                UNION ALL
+
+                SELECT
+                    'ІПЗ-21',
+                    'Вебпрограмування',
+                    'Шевченко Наталія Олегівна',
+                    3,
+                    'Комп''ютерна лабораторія 2',
+                    5,
+                    1,
+                    0
+
+                UNION ALL
+
+                SELECT
+                    'КН-21',
+                    'Алгоритми та структури даних',
+                    'Іваненко Олександр Петрович',
+                    1,
+                    '102',
+                    1,
+                    2,
+                    0
+
+                UNION ALL
+
+                SELECT
+                    'КН-21',
+                    'Алгоритми та структури даних',
+                    'Мельник Олена Сергіївна',
+                    2,
+                    '202',
+                    2,
+                    2,
+                    0
+
+                UNION ALL
+
+                SELECT
+                    'КН-21',
+                    'Бази даних',
+                    'Петренко Марія Василівна',
+                    1,
+                    '102',
+                    3,
+                    1,
+                    0
+
+                UNION ALL
+
+                SELECT
+                    'КН-21',
+                    'Бази даних',
+                    'Бондар Сергій Миколайович',
+                    3,
+                    'Комп''ютерна лабораторія 2',
+                    4,
+                    2,
+                    2
+
+                UNION ALL
+
+                SELECT
+                    'КН-21',
+                    'Комп''ютерні мережі',
+                    'Мельник Олена Сергіївна',
+                    1,
+                    '202',
+                    5,
+                    2,
+                    1
+
+                UNION ALL
+
+                SELECT
+                    'КН-21',
+                    'Комп''ютерні мережі',
+                    'Коваль Андрій Ігорович',
+                    3,
+                    'Комп''ютерна лабораторія 1',
+                    6,
+                    1,
+                    0
+            ) seed
+            INNER JOIN `Groups` g
+                ON g.`Name` = seed.`GroupName`
+            INNER JOIN `Disciplines` discipline
+                ON discipline.`Name` =
+                   seed.`DisciplineName`
+            INNER JOIN `GroupDisciplines` gd
+                ON gd.`GroupId` = g.`Id`
+                AND gd.`DisciplineId` = discipline.`Id`
+            INNER JOIN `Semesters` semester
+                ON semester.`Id` = gd.`SemesterId`
+                AND semester.`Name` =
+                    'Осінній семестр 2026/2027'
+            INNER JOIN `Teachers` teacher
+                ON teacher.`Name` = seed.`TeacherName`
+            INNER JOIN `TeachingAssignments` ta
+                ON ta.`GroupDisciplineId` = gd.`Id`
+                AND ta.`TeacherId` = teacher.`Id`
+                AND ta.`LessonType` = seed.`LessonType`
+            INNER JOIN `ClassRooms` room
+                ON room.`Name` = seed.`ClassRoomName`
+            WHERE NOT EXISTS
+            (
+                SELECT 1
+                FROM `BaseLessons` existing
+                WHERE
+                    existing.`TeachingAssignmentId` =
+                        ta.`Id`
+                    AND existing.`WeekDay` =
+                        seed.`WeekDay`
+                    AND existing.`LessonPosition` =
+                        seed.`LessonPosition`
+                    AND existing.`WeekProperty` =
+                        seed.`WeekProperty`
+            );
+            """;
+
+        connection.Execute(
+            sql,
             transaction: transaction);
     }
 }

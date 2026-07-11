@@ -88,13 +88,15 @@ using (var scope = app.Services.CreateScope())
         initializer.Initialize();
 
         app.Logger.LogInformation(
-            "База даних успішно ініціалізована, таблиці створено.");
+            "Базу даних успішно ініціалізовано, " +
+            "таблиці створено.");
     }
     catch (Exception ex)
     {
         app.Logger.LogError(
             ex,
-            "Помилка під час ініціалізації бази даних MySQL!");
+            "Помилка під час ініціалізації " +
+            "бази даних MySQL.");
 
         throw;
     }
