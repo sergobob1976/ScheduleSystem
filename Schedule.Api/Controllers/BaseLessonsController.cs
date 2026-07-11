@@ -9,30 +9,43 @@ namespace Schedule.Api.Controllers;
 [Route("api/[controller]")]
 public class BaseLessonsController : ControllerBase
 {
-    private readonly IBaseLessonRepository _baseLessonRepository;
+    private readonly IBaseLessonRepository
+        _baseLessonRepository;
+
     private readonly ITeachingAssignmentRepository
         _teachingAssignmentRepository;
+
     private readonly IGroupDisciplineRepository
         _groupDisciplineRepository;
+
     private readonly IClassRoomRepository
         _classRoomRepository;
 
     public BaseLessonsController(
         IBaseLessonRepository baseLessonRepository,
-        ITeachingAssignmentRepository teachingAssignmentRepository,
-        IGroupDisciplineRepository groupDisciplineRepository,
+        ITeachingAssignmentRepository
+            teachingAssignmentRepository,
+        IGroupDisciplineRepository
+            groupDisciplineRepository,
         IClassRoomRepository classRoomRepository)
     {
-        _baseLessonRepository = baseLessonRepository;
+        _baseLessonRepository =
+            baseLessonRepository;
+
         _teachingAssignmentRepository =
             teachingAssignmentRepository;
+
         _groupDisciplineRepository =
             groupDisciplineRepository;
-        _classRoomRepository = classRoomRepository;
+
+        _classRoomRepository =
+            classRoomRepository;
     }
 
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<BaseLesson>>> GetAll()
+    public async Task<
+        ActionResult<IEnumerable<BaseLesson>>>
+        GetAll()
     {
         var lessons =
             await _baseLessonRepository.GetAllAsync();
@@ -41,7 +54,8 @@ public class BaseLessonsController : ControllerBase
     }
 
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<BaseLesson>> GetById(int id)
+    public async Task<ActionResult<BaseLesson>>
+        GetById(int id)
     {
         var lesson =
             await _baseLessonRepository.GetByIdAsync(id);
@@ -59,7 +73,8 @@ public class BaseLessonsController : ControllerBase
     }
 
     [HttpGet("group/{groupId:int}")]
-    public async Task<ActionResult<IEnumerable<BaseLesson>>>
+    public async Task<
+        ActionResult<IEnumerable<BaseLesson>>>
         GetByGroup(int groupId)
     {
         var lessons =
@@ -81,11 +96,21 @@ public class BaseLessonsController : ControllerBase
             return validationResult;
         }
 
+        var conflictResult =
+            await ValidateConflictsAsync(lesson);
+
+        if (conflictResult != null)
+        {
+            return conflictResult;
+        }
+
         int newId =
-            await _baseLessonRepository.CreateAsync(lesson);
+            await _baseLessonRepository.CreateAsync(
+                lesson);
 
         var created =
-            await _baseLessonRepository.GetByIdAsync(newId);
+            await _baseLessonRepository.GetByIdAsync(
+                newId);
 
         if (created == null)
         {
@@ -139,8 +164,19 @@ public class BaseLessonsController : ControllerBase
             return validationResult;
         }
 
+        var conflictResult =
+            await ValidateConflictsAsync(
+                lesson,
+                id);
+
+        if (conflictResult != null)
+        {
+            return conflictResult;
+        }
+
         bool updated =
-            await _baseLessonRepository.UpdateAsync(lesson);
+            await _baseLessonRepository.UpdateAsync(
+                lesson);
 
         if (!updated)
         {
@@ -184,8 +220,9 @@ public class BaseLessonsController : ControllerBase
         return NoContent();
     }
 
-    private async Task<ActionResult?> PrepareAndValidateAsync(
-        BaseLesson lesson)
+    private async Task<ActionResult?>
+        PrepareAndValidateAsync(
+            BaseLesson lesson)
     {
         if (!lesson.TeachingAssignmentId.HasValue ||
             lesson.TeachingAssignmentId.Value <= 0)
@@ -198,8 +235,9 @@ public class BaseLessonsController : ControllerBase
         }
 
         var assignment =
-            await _teachingAssignmentRepository.GetByIdAsync(
-                lesson.TeachingAssignmentId.Value);
+            await _teachingAssignmentRepository
+                .GetByIdAsync(
+                    lesson.TeachingAssignmentId.Value);
 
         if (assignment == null)
         {
@@ -212,15 +250,17 @@ public class BaseLessonsController : ControllerBase
 
         var groupDiscipline =
             assignment.GroupDiscipline
-            ?? await _groupDisciplineRepository.GetByIdAsync(
-                assignment.GroupDisciplineId);
+            ?? await _groupDisciplineRepository
+                .GetByIdAsync(
+                    assignment.GroupDisciplineId);
 
         if (groupDiscipline == null)
         {
             return BadRequest(new
             {
                 Message =
-                    "Навчальний план групи для призначення не знайдено."
+                    "Навчальний план групи для " +
+                    "призначення не знайдено."
             });
         }
 
@@ -233,8 +273,9 @@ public class BaseLessonsController : ControllerBase
             else
             {
                 var classRoom =
-                    await _classRoomRepository.GetByIdAsync(
-                        lesson.ClassRoomId.Value);
+                    await _classRoomRepository
+                        .GetByIdAsync(
+                            lesson.ClassRoomId.Value);
 
                 if (classRoom == null)
                 {
@@ -299,6 +340,83 @@ public class BaseLessonsController : ControllerBase
         lesson.Discipline = null;
         lesson.ClassRoom = null;
         lesson.Semester = null;
+
+        return null;
+    }
+
+    private async Task<ActionResult?>
+        ValidateConflictsAsync(
+            BaseLesson lesson,
+            int? excludedId = null)
+    {
+        var conflicts =
+            (
+                await _baseLessonRepository
+                    .GetConflictingLessonsAsync(
+                        lesson,
+                        excludedId)
+            ).ToList();
+
+        var groupConflict =
+            conflicts.FirstOrDefault(
+                existing =>
+                    existing.GroupId ==
+                    lesson.GroupId);
+
+        if (groupConflict != null)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Обрана група вже має заняття " +
+                    "в цей день і на цій парі.",
+                ConflictType = "Group",
+                ConflictingLessonId =
+                    groupConflict.Id
+            });
+        }
+
+        var teacherConflict =
+            conflicts.FirstOrDefault(
+                existing =>
+                    existing.TeacherId ==
+                    lesson.TeacherId);
+
+        if (teacherConflict != null)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Обраний викладач уже проводить " +
+                    "інше заняття в цей день і " +
+                    "на цій парі.",
+                ConflictType = "Teacher",
+                ConflictingLessonId =
+                    teacherConflict.Id
+            });
+        }
+
+        if (lesson.ClassRoomId.HasValue)
+        {
+            var classRoomConflict =
+                conflicts.FirstOrDefault(
+                    existing =>
+                        existing.ClassRoomId ==
+                        lesson.ClassRoomId);
+
+            if (classRoomConflict != null)
+            {
+                return Conflict(new
+                {
+                    Message =
+                        "Обрана аудиторія вже зайнята " +
+                        "в цей день і на цій парі.",
+                    ConflictType = "ClassRoom",
+                    ConflictingLessonId =
+                        classRoomConflict.Id
+                });
+            }
+        }
 
         return null;
     }

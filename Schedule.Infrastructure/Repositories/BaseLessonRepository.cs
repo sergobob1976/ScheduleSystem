@@ -2,6 +2,7 @@
 using Dapper;
 using Microsoft.Extensions.Configuration;
 using MySqlConnector;
+using Schedule.Core.Enums;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 
@@ -105,6 +106,65 @@ public class BaseLessonRepository : IBaseLessonRepository
             connection,
             sql,
             new { GroupId = groupId });
+    }
+
+    public async Task<IEnumerable<BaseLesson>>
+        GetConflictingLessonsAsync(
+            BaseLesson lesson,
+            int? excludedId = null)
+    {
+        using var connection = CreateConnection();
+
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE
+                bl.SemesterId = @SemesterId
+                AND bl.WeekDay = @WeekDay
+                AND bl.LessonPosition = @LessonPosition
+
+                AND
+                (
+                    bl.WeekProperty = @EveryWeek
+                    OR @WeekProperty = @EveryWeek
+                    OR bl.WeekProperty = @WeekProperty
+                )
+
+                AND
+                (
+                    bl.GroupId = @GroupId
+                    OR bl.TeacherId = @TeacherId
+                    OR
+                    (
+                        @ClassRoomId IS NOT NULL
+                        AND bl.ClassRoomId = @ClassRoomId
+                    )
+                )
+
+                AND
+                (
+                    @ExcludedId IS NULL
+                    OR bl.Id <> @ExcludedId
+                )
+
+            ORDER BY bl.Id;
+            """;
+
+        return await QueryAsync(
+            connection,
+            sql,
+            new
+            {
+                lesson.SemesterId,
+                lesson.WeekDay,
+                lesson.LessonPosition,
+                lesson.WeekProperty,
+                lesson.GroupId,
+                lesson.TeacherId,
+                lesson.ClassRoomId,
+                EveryWeek =
+                    WeekProperty.EveryWeek,
+                ExcludedId = excludedId
+            });
     }
 
     public async Task<int> CreateAsync(
