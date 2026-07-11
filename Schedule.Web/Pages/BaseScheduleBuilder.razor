@@ -24,6 +24,24 @@
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
 else if (data is not null)
 {
+    @if (showEditor)
+    {
+        <div class="card border-primary shadow-sm mb-4"><div class="card-header bg-primary text-white">Нове заняття: @GetDayName(editorDay), @editorPosition пара</div>
+            <div class="card-body"><div class="row g-3 align-items-end">
+                <div class="col-md-6"><label class="form-label fw-bold">Призначення викладача</label>
+                    <select class="form-select" @bind="assignmentId"><option value="0">Оберіть дисципліну та викладача</option>
+                        @foreach (var item in AvailableAssignments) { <option value="@item.Id">@item.GroupDiscipline?.Discipline?.Name — @item.Teacher?.Name (@GetLessonTypeName(item.LessonType), @item.AssignedHours год.)</option> }
+                    </select></div>
+                <div class="col-md-3"><label class="form-label fw-bold">Аудиторія</label><select class="form-select" @bind="classRoomId"><option value="0">Без аудиторії</option>
+                    @foreach (var room in classRooms) { <option value="@room.Id">@room.Name</option> }
+                </select></div>
+                <div class="col-md-3"><label class="form-label fw-bold">Повторення</label><select class="form-select" @bind="editorWeekProperty">
+                    <option value="@selectedWeek">@GetWeekName(selectedWeek)</option><option value="@WeekProperty.EveryWeek">Кожний тиждень</option>
+                </select></div>
+                <div class="col-12 d-flex gap-2"><button class="btn btn-primary" @onclick="CreateLesson">Створити заняття</button><button class="btn btn-outline-secondary" @onclick="CloseEditor">Скасувати</button></div>
+            </div></div>
+        </div>
+    }
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <div class="btn-group" role="group" aria-label="Тип тижня">
@@ -55,6 +73,7 @@ else if (data is not null)
                                         @if (lesson.ClassRoom is not null) { <span class="badge bg-light text-dark border">@lesson.ClassRoom.Name</span> }
                                         @if (lesson.WeekProperty == WeekProperty.EveryWeek) { <span class="badge bg-info text-dark ms-1">Щотижня</span> }
                                     }
+                                    else { <button class="btn btn-sm btn-outline-secondary w-100 h-100 border-0" @onclick="() => OpenEditor(day, currentPosition)">＋ Додати</button> }
                                 </td>
                             }
                         </tr>
@@ -83,17 +102,44 @@ else if (data is not null)
     private List<Group> groups = [];
     private BaseScheduleBuilderResponse? data;
     private List<BaseLesson> baseLessons = [];
+    private List<TeachingAssignment> assignments = [];
+    private List<ClassRoom> classRooms = [];
     private readonly WeekDay[] weekDays = Enum.GetValues<WeekDay>();
     private WeekProperty selectedWeek = WeekProperty.Numerator;
     private int semesterId;
     private int groupId;
     private bool isLoading;
     private string errorMessage = "";
+    private bool showEditor;
+    private WeekDay editorDay;
+    private int editorPosition;
+    private int assignmentId;
+    private int classRoomId;
+    private WeekProperty editorWeekProperty;
+
+    private IEnumerable<TeachingAssignment> AvailableAssignments => assignments.Where(x =>
+        x.GroupDiscipline?.GroupId == groupId && x.GroupDiscipline.SemesterId == semesterId);
 
     protected override async Task OnInitializedAsync()
     {
         semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
         groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
+        assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
+        classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
+    }
+
+    private void OpenEditor(WeekDay day, int position) { editorDay = day; editorPosition = position; editorWeekProperty = selectedWeek; assignmentId = 0; classRoomId = 0; showEditor = true; }
+    private void CloseEditor() => showEditor = false;
+
+    private async Task CreateLesson()
+    {
+        if (assignmentId <= 0) { errorMessage = "Оберіть призначення викладача."; return; }
+        var lesson = new BaseLesson { TeachingAssignmentId = assignmentId, ClassRoomId = classRoomId > 0 ? classRoomId : null,
+            LessonPosition = editorPosition, WeekDay = editorDay, WeekProperty = editorWeekProperty, LessonType = LessonType.Lecture,
+            GroupId = 0, TeacherId = 0, DisciplineId = 0, SemesterId = 0 };
+        var response = await Http.PostAsJsonAsync("api/BaseLessons", lesson);
+        if (!response.IsSuccessStatusCode) { errorMessage = await response.Content.ReadAsStringAsync(); return; }
+        showEditor = false; await LoadBuilder();
     }
 
     private async Task LoadBuilder()
@@ -123,4 +169,8 @@ else if (data is not null)
         WeekDay.Friday => "П’ятниця", WeekDay.Saturday => "Субота",
         WeekDay.Sunday => "Неділя", _ => "—"
     };
+
+    private static string GetWeekName(WeekProperty value) => value == WeekProperty.Numerator ? "Чисельник" : "Знаменник";
+    private static string GetLessonTypeName(LessonType value) => value switch
+    { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
 }
