@@ -588,30 +588,9 @@ public class BaseLessonsController : ControllerBase
         BaseLesson lesson,
         Semester semester)
     {
-        int lessonCount = 0;
-
-        foreach (var calendarWeek in
-                 SemesterCalendar.GetWeeks(semester))
-        {
-            if (!SemesterCalendar.IsLessonIncluded(
-                    lesson.WeekProperty,
-                    calendarWeek.WeekProperty))
-            {
-                continue;
-            }
-
-            DateTime lessonDate =
-                SemesterCalendar.GetLessonDate(
-                    calendarWeek.WeekStartDate,
-                    lesson.WeekDay);
-
-            if (lessonDate >= semester.StartDate.Date &&
-                lessonDate <= semester.EndDate.Date)
-            {
-                lessonCount++;
-            }
-        }
-
-        return lessonCount * AcademicHoursPerLesson;
+        return SemesterCalendar.CountOccurrences(
+                   semester,
+                   lesson) *
+               AcademicHoursPerLesson;
     }
 }

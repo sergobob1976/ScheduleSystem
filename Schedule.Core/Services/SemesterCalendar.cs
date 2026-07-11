@@ -67,7 +67,47 @@ public static class SemesterCalendar
         return lessonWeekProperty ==
                    WeekProperty.EveryWeek ||
                lessonWeekProperty ==
-                   calendarWeekProperty;
+               calendarWeekProperty;
+    }
+
+    public static int CountOccurrences(
+        Semester semester,
+        WeekDay weekDay,
+        WeekProperty weekProperty)
+    {
+        int count = 0;
+
+        foreach (var calendarWeek in GetWeeks(semester))
+        {
+            if (!IsLessonIncluded(
+                    weekProperty,
+                    calendarWeek.WeekProperty))
+            {
+                continue;
+            }
+
+            DateTime lessonDate = GetLessonDate(
+                calendarWeek.WeekStartDate,
+                weekDay);
+
+            if (lessonDate >= semester.StartDate.Date &&
+                lessonDate <= semester.EndDate.Date)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public static int CountOccurrences(
+        Semester semester,
+        BaseLesson lesson)
+    {
+        return CountOccurrences(
+            semester,
+            lesson.WeekDay,
+            lesson.WeekProperty);
     }
 
     private static WeekProperty GetWeekProperty(

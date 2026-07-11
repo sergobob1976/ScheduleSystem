@@ -474,33 +474,13 @@ public class BaseScheduleBuilderController
             Semester semester)
     {
         int totalLessonCount = 0;
-        var lessons = baseLessons.ToList();
 
-        foreach (var calendarWeek in
-                 SemesterCalendar.GetWeeks(semester))
+        foreach (var baseLesson in baseLessons)
         {
-            foreach (var baseLesson in lessons)
-            {
-                if (!SemesterCalendar.IsLessonIncluded(
-                        baseLesson.WeekProperty,
-                        calendarWeek.WeekProperty))
-                {
-                    continue;
-                }
-
-                DateTime lessonDate =
-                    SemesterCalendar.GetLessonDate(
-                        calendarWeek.WeekStartDate,
-                        baseLesson.WeekDay);
-
-                if (lessonDate >=
-                        semester.StartDate.Date &&
-                    lessonDate <=
-                        semester.EndDate.Date)
-                {
-                    totalLessonCount++;
-                }
-            }
+            totalLessonCount +=
+                SemesterCalendar.CountOccurrences(
+                    semester,
+                    baseLesson);
         }
 
         return totalLessonCount;

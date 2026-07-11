@@ -166,9 +166,11 @@ public class BaseScheduleReportRepository
                             item.DisciplineId)
                     .Sum(
                         lesson =>
-                            CountOccurrences(
-                                lesson,
-                                semester));
+                            SemesterCalendar
+                                .CountOccurrences(
+                                    semester,
+                                    lesson.WeekDay,
+                                    lesson.WeekProperty));
 
             item.ScheduledHours =
                 item.ScheduledLessonCount *
@@ -227,37 +229,6 @@ public class BaseScheduleReportRepository
                 header.PlannedHours,
             Disciplines = disciplineItems
         };
-    }
-
-    private static int CountOccurrences(
-        TeacherBaseLessonItem lesson,
-        Semester semester)
-    {
-        int count = 0;
-
-        foreach (var calendarWeek in
-                 SemesterCalendar.GetWeeks(semester))
-        {
-            if (!SemesterCalendar.IsLessonIncluded(
-                    lesson.WeekProperty,
-                    calendarWeek.WeekProperty))
-            {
-                continue;
-            }
-
-            DateTime lessonDate =
-                SemesterCalendar.GetLessonDate(
-                    calendarWeek.WeekStartDate,
-                    lesson.WeekDay);
-
-            if (lessonDate >= semester.StartDate.Date &&
-                lessonDate <= semester.EndDate.Date)
-            {
-                count++;
-            }
-        }
-
-        return count;
     }
 
     private class TeacherReportHeader
