@@ -1,99 +1,92 @@
 @Schedule.Api_HostAddress = https://localhost:7085
-# (Тут вже має стояти твій правильний порт, який згенерувала Visual Studio!)
 
-### 1. Отримати всі групи
+###
+# Усі семестри
+
+GET {{Schedule.Api_HostAddress}}/api/semesters
+Accept: application/json
+
+###
+# Усі спеціальності
+
+GET {{Schedule.Api_HostAddress}}/api/specialties
+Accept: application/json
+
+###
+# Усі групи
+
 GET {{Schedule.Api_HostAddress}}/api/groups
 Accept: application/json
 
 ###
+# Усі дисципліни
 
-### 2. Створити першу групу
-POST {{Schedule.Api_HostAddress}}/api/groups
-Content-Type: application/json
-
-{
-  "name": "КН-301"
-}
+GET {{Schedule.Api_HostAddress}}/api/disciplines
+Accept: application/json
 
 ###
+# Усі викладачі
 
-### 3. Отримати всіх викладачів
 GET {{Schedule.Api_HostAddress}}/api/teachers
 Accept: application/json
 
 ###
+# Усі аудиторії
 
-### 4. Додати нового викладача
-POST {{Schedule.Api_HostAddress}}/api/teachers
-Content-Type: application/json
+GET {{Schedule.Api_HostAddress}}/api/classrooms
+Accept: application/json
 
-{
-  "name": "Дорошенко Іван Петрович",
-  "position": "Доцент, к.т.н."
-}
+###
+# Дисципліни груп
 
-### 3. Створити аудиторію
-POST {{Schedule.Api_HostAddress}}/api/classrooms
-Content-Type: application/json
+GET {{Schedule.Api_HostAddress}}/api/groupdisciplines
+Accept: application/json
 
-{
-  "name": "302-А"
-}
+###
+# Призначення викладачів
 
-### 4. Створити новий предмет
-POST {{Schedule.Api_HostAddress}}/api/disciplines
-Content-Type: application/json
+GET {{Schedule.Api_HostAddress}}/api/teachingassignments
+Accept: application/json
 
-{
-  "name": "Об'єктно-орієнтоване програмування",
-  "totalHours": 120
-}
+###
+# Семестрове навантаження викладачів
 
-### 5. Створити семестр
-POST {{Schedule.Api_HostAddress}}/api/semesters
-Content-Type: application/json
+GET {{Schedule.Api_HostAddress}}/api/teachersemesterloads
+Accept: application/json
 
-{
-  "name": "I семестр 2026-2027",
-  "startDate": "2026-09-01",
-  "endDate": "2026-12-31"
-}
+###
+# Навантаження викладачів за дисциплінами
 
-### 6. Диспетчер додає пару в розклад
-POST {{Schedule.Api_HostAddress}}/api/reallessons
-Content-Type: application/json
+GET {{Schedule.Api_HostAddress}}/api/teacherdisciplineloads
+Accept: application/json
 
-{
-  "groupId": 1,
-  "teacherId": 1,
-  "disciplineId": 1,
-  "classRoomId": 1,
-  "semesterId": 1,
-  "lessonDate": "2026-09-07",
-  "lessonPosition": 1,
-  "weekDay": 1,
-  "weekProperty": 0,
-  "conferenceLink": null,
-  "resourceLink": null
-}
+###
+# Дані конструктора для групи ІПЗ-21
 
-### 7. Викладач оновлює лінки дистанційного навчання для пари №1
-PATCH {{Schedule.Api_HostAddress}}/api/reallessons/1/links
-Content-Type: application/json
+GET {{Schedule.Api_HostAddress}}/api/BaseScheduleBuilder/semester/1/group/1
+Accept: application/json
 
-{
-  "conferenceLink": "https://zoom.us/j/123456789",
-  "resourceLink": "https://moodle.university.edu/course/view.php?id=45"
-}
+###
+# Дані конструктора для групи КН-21
 
-### 8. Отримуємо весь розклад з красивими назвами та лінками
-GET {{Schedule.Api_HostAddress}}/api/reallessons
+GET {{Schedule.Api_HostAddress}}/api/BaseScheduleBuilder/semester/1/group/2
+Accept: application/json
 
-### 9. Створити шаблон розкладу (BaseLesson)
+###
+# Усі базові пари
+
+GET {{Schedule.Api_HostAddress}}/api/baselessons
+Accept: application/json
+
+###
+# Створити базову пару для ІПЗ-21
+# Понеділок, перша пара, щотижня
+
 POST {{Schedule.Api_HostAddress}}/api/baselessons
 Content-Type: application/json
 
 {
+  "teachingAssignmentId": 1,
   "groupId": 1,
   "teacherId": 1,
   "disciplineId": 1,
@@ -101,21 +94,18 @@ Content-Type: application/json
   "semesterId": 1,
   "lessonPosition": 1,
   "weekDay": 1,
-  "weekProperty": 0
+  "weekProperty": 0,
+  "lessonType": 1
 }
 
-### Get all specialties
-GET https://localhost:7085/api/specialties
+###
+# Усі базові пари після створення
+
+GET {{Schedule.Api_HostAddress}}/api/baselessons
 Accept: application/json
 
 ###
+# Усі реальні пари
 
-### Create specialty
-POST https://localhost:7085/api/specialties
-Content-Type: application/json
-
-{
-  "code": "F7",
-  "name": "Комп'ютерні науки"
-}
-
+GET {{Schedule.Api_HostAddress}}/api/reallessons
+Accept: application/json

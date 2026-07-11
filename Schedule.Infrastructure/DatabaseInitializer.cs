@@ -111,8 +111,10 @@ public class DatabaseInitializer
                 `Name` VARCHAR(100) NOT NULL UNIQUE,
                 `StartDate` DATE NOT NULL,
                 `EndDate` DATE NOT NULL,
+                `FirstWeekProperty` INT NOT NULL DEFAULT 1,
 
-                CHECK (`EndDate` >= `StartDate`)
+                CHECK (`EndDate` >= `StartDate`),
+                CHECK (`FirstWeekProperty` IN (1, 2))
             )
             ENGINE=InnoDB
             DEFAULT CHARSET=utf8mb4
@@ -466,6 +468,16 @@ public class DatabaseInitializer
     private static void UpdateExistingTables(
         IDbConnection connection)
     {
+        EnsureColumn(
+            connection,
+            "Semesters",
+            "FirstWeekProperty",
+            """
+            ALTER TABLE `Semesters`
+            ADD COLUMN `FirstWeekProperty` INT NOT NULL DEFAULT 1
+            AFTER `EndDate`;
+            """);
+
         EnsureColumn(
             connection,
             "RealLessons",

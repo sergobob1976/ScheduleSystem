@@ -35,7 +35,8 @@ public class SemesterRepository : ISemesterRepository
                 Id,
                 Name,
                 StartDate,
-                EndDate
+                EndDate,
+                FirstWeekProperty
             FROM `Semesters`
             ORDER BY StartDate DESC, Name;
             """;
@@ -52,7 +53,8 @@ public class SemesterRepository : ISemesterRepository
                 Id,
                 Name,
                 StartDate,
-                EndDate
+                EndDate,
+                FirstWeekProperty
             FROM `Semesters`
             WHERE Id = @Id;
             """;
@@ -73,13 +75,15 @@ public class SemesterRepository : ISemesterRepository
             (
                 Name,
                 StartDate,
-                EndDate
+                EndDate,
+                FirstWeekProperty
             )
             VALUES
             (
                 @Name,
                 @StartDate,
-                @EndDate
+                @EndDate,
+                @FirstWeekProperty
             );
 
             SELECT LAST_INSERT_ID();
@@ -100,7 +104,8 @@ public class SemesterRepository : ISemesterRepository
             SET
                 Name = @Name,
                 StartDate = @StartDate,
-                EndDate = @EndDate
+                EndDate = @EndDate,
+                FirstWeekProperty = @FirstWeekProperty
             WHERE Id = @Id;
             """;
 

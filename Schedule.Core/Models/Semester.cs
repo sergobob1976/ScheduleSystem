@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text;
+using Schedule.Core.Enums;
 
 namespace Schedule.Core.Models;
 
@@ -11,4 +12,6 @@ public class Semester
     public string Name { get; set; } = string.Empty; // Наприклад, "Осінній 2026"
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
+    public WeekProperty FirstWeekProperty { get; set; } =
+        WeekProperty.Numerator;
 }

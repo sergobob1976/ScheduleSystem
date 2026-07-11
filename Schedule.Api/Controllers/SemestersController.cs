@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using MySqlConnector;
+using Schedule.Core.Enums;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 
@@ -220,6 +221,18 @@ public class SemestersController : ControllerBase
                 Message =
                     "Дата завершення не може бути раніше " +
                     "дати початку семестру."
+            });
+        }
+
+        if (semester.FirstWeekProperty is not
+            (WeekProperty.Numerator or
+             WeekProperty.Denominator))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Перший тиждень семестру має бути " +
+                    "чисельником або знаменником."
             });
         }
 

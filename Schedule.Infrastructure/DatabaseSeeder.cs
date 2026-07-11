@@ -31,12 +31,18 @@ public static class DatabaseSeeder
     {
         const string sql = """
             INSERT IGNORE INTO `Semesters`
-                (`Name`, `StartDate`, `EndDate`)
+                (
+                    `Name`,
+                    `StartDate`,
+                    `EndDate`,
+                    `FirstWeekProperty`
+                )
             VALUES
                 (
                     'Осінній семестр 2026/2027',
                     '2026-09-01',
-                    '2026-12-31'
+                    '2026-12-31',
+                    1
                 );
 
 
