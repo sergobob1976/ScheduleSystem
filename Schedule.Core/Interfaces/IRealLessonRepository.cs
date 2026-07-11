@@ -16,6 +16,10 @@ public interface IRealLessonRepository
     // Спеціальні методи для MAUI-додатку
     Task<IEnumerable<RealLesson>> GetByGroupIdAsync(int groupId);
     Task<IEnumerable<RealLesson>> GetByTeacherIdAsync(int teacherId);
+    Task<IEnumerable<RealLesson>> GetByGroupAndDateAsync(
+        int groupId, DateTime date);
+    Task<IEnumerable<RealLesson>> GetByTeacherAndDateAsync(
+        int teacherId, DateTime date);
 
     Task<IEnumerable<RealLesson>>
         GetBySemesterAndDateRangeAsync(

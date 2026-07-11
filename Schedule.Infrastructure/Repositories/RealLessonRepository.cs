@@ -127,6 +127,40 @@ public class RealLessonRepository : IRealLessonRepository
     }
 
     public async Task<IEnumerable<RealLesson>>
+        GetByGroupAndDateAsync(int groupId, DateTime date)
+    {
+        using var connection = CreateConnection();
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE rl.GroupId = @GroupId
+                AND rl.LessonDate = @LessonDate
+            ORDER BY rl.LessonPosition;
+            """;
+        return await QueryAsync(connection, sql, new
+        {
+            GroupId = groupId,
+            LessonDate = date.Date
+        });
+    }
+
+    public async Task<IEnumerable<RealLesson>>
+        GetByTeacherAndDateAsync(int teacherId, DateTime date)
+    {
+        using var connection = CreateConnection();
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE rl.TeacherId = @TeacherId
+                AND rl.LessonDate = @LessonDate
+            ORDER BY rl.LessonPosition;
+            """;
+        return await QueryAsync(connection, sql, new
+        {
+            TeacherId = teacherId,
+            LessonDate = date.Date
+        });
+    }
+
+    public async Task<IEnumerable<RealLesson>>
         GetBySemesterAndDateRangeAsync(
             int semesterId,
             DateTime startDate,

@@ -183,15 +183,8 @@ public class RealLessonsController : ControllerBase
             int groupId,
             DateTime date)
     {
-        var allGroupLessons =
-            await _lessonRepository
-                .GetByGroupIdAsync(groupId);
-
-        var dayLessons =
-            allGroupLessons.Where(
-                lesson =>
-                    lesson.LessonDate.Date ==
-                    date.Date);
+        var dayLessons = await _lessonRepository
+            .GetByGroupAndDateAsync(groupId, date);
 
         return Ok(dayLessons);
     }
@@ -202,15 +195,8 @@ public class RealLessonsController : ControllerBase
             int teacherId,
             DateTime date)
     {
-        var allTeacherLessons =
-            await _lessonRepository
-                .GetByTeacherIdAsync(teacherId);
-
-        var dayLessons =
-            allTeacherLessons.Where(
-                lesson =>
-                    lesson.LessonDate.Date ==
-                    date.Date);
+        var dayLessons = await _lessonRepository
+            .GetByTeacherAndDateAsync(teacherId, date);
 
         return Ok(dayLessons);
     }
