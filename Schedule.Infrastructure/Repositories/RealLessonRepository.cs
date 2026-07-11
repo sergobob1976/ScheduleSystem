@@ -163,10 +163,10 @@ public class RealLessonRepository : IRealLessonRepository
                 @ResourceLink
             );
 
-            SELECT LAST_INSERT_ID();
+            SELECT CAST(LAST_INSERT_ID() AS SIGNED);
             """;
 
-        return await connection.ExecuteScalarAsync<int>(
+        return await connection.QuerySingleAsync<int>(
             sql,
             lesson);
     }
