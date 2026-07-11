@@ -3,6 +3,7 @@ using Schedule.Core.DTOs;
 using Schedule.Core.Enums;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
+using Schedule.Core.Services;
 
 namespace Schedule.Api.Controllers;
 
@@ -151,6 +152,9 @@ public class BaseScheduleBuilderController
                 SemesterEndDate =
                     semester.EndDate,
 
+                FirstWeekProperty =
+                    semester.FirstWeekProperty,
+
                 GroupId =
                     group.Id,
 
@@ -282,114 +286,182 @@ public class BaseScheduleBuilderController
         return Ok(response);
     }
 
+    [HttpGet(
+        "semester/{semesterId:int}/group/{groupId:int}/projection")]
+    public async Task<
+        ActionResult<BaseScheduleProjectionResponse>>
+        GetProjection(
+            int semesterId,
+            int groupId)
+    {
+        var semester =
+            await _semesterRepository.GetByIdAsync(
+                semesterId);
+
+        if (semester == null)
+        {
+            return NotFound(new
+            {
+                Message =
+                    $"Семестр з ID {semesterId} " +
+                    "не знайдено."
+            });
+        }
+
+        var group =
+            await _groupRepository.GetByIdAsync(
+                groupId);
+
+        if (group == null)
+        {
+            return NotFound(new
+            {
+                Message =
+                    $"Групу з ID {groupId} не знайдено."
+            });
+        }
+
+        var baseLessons =
+            (
+                await _baseLessonRepository
+                    .GetByGroupIdAsync(groupId)
+            )
+            .Where(
+                lesson =>
+                    lesson.SemesterId == semesterId)
+            .ToList();
+
+        var response =
+            new BaseScheduleProjectionResponse
+            {
+                SemesterId = semester.Id,
+                SemesterName = semester.Name,
+                GroupId = group.Id,
+                GroupName = group.Name,
+                FirstWeekProperty =
+                    semester.FirstWeekProperty
+            };
+
+        foreach (var calendarWeek in
+                 SemesterCalendar.GetWeeks(semester))
+        {
+            var projectionWeek =
+                new BaseScheduleProjectionWeek
+                {
+                    WeekNumber =
+                        calendarWeek.WeekNumber,
+                    WeekStartDate =
+                        calendarWeek.WeekStartDate,
+                    WeekEndDate =
+                        calendarWeek.WeekEndDate,
+                    WeekProperty =
+                        calendarWeek.WeekProperty
+                };
+
+            foreach (var baseLesson in baseLessons)
+            {
+                if (!SemesterCalendar.IsLessonIncluded(
+                        baseLesson.WeekProperty,
+                        calendarWeek.WeekProperty))
+                {
+                    continue;
+                }
+
+                DateTime lessonDate =
+                    SemesterCalendar.GetLessonDate(
+                        calendarWeek.WeekStartDate,
+                        baseLesson.WeekDay);
+
+                if (lessonDate <
+                        semester.StartDate.Date ||
+                    lessonDate >
+                        semester.EndDate.Date)
+                {
+                    continue;
+                }
+
+                projectionWeek.Lessons.Add(
+                    new BaseScheduleProjectionLesson
+                    {
+                        BaseLessonId = baseLesson.Id,
+                        TeachingAssignmentId =
+                            baseLesson
+                                .TeachingAssignmentId,
+                        LessonDate = lessonDate,
+                        WeekDay = baseLesson.WeekDay,
+                        LessonPosition =
+                            baseLesson.LessonPosition,
+                        SourceWeekProperty =
+                            baseLesson.WeekProperty,
+                        LessonType =
+                            baseLesson.LessonType,
+                        DisciplineId =
+                            baseLesson.DisciplineId,
+                        DisciplineName =
+                            baseLesson.Discipline?.Name
+                            ?? string.Empty,
+                        TeacherId =
+                            baseLesson.TeacherId,
+                        TeacherName =
+                            baseLesson.Teacher?.Name
+                            ?? string.Empty,
+                        ClassRoomId =
+                            baseLesson.ClassRoomId,
+                        ClassRoomName =
+                            baseLesson.ClassRoom?.Name
+                    });
+            }
+
+            projectionWeek.Lessons =
+                projectionWeek.Lessons
+                    .OrderBy(
+                        lesson => lesson.LessonDate)
+                    .ThenBy(
+                        lesson =>
+                            lesson.LessonPosition)
+                    .ToList();
+
+            response.Weeks.Add(projectionWeek);
+        }
+
+        return Ok(response);
+    }
+
     private static int
         CalculateScheduledLessonCount(
             IEnumerable<BaseLesson> baseLessons,
             Semester semester)
     {
         int totalLessonCount = 0;
+        var lessons = baseLessons.ToList();
 
-        foreach (var baseLesson in baseLessons)
+        foreach (var calendarWeek in
+                 SemesterCalendar.GetWeeks(semester))
         {
-            totalLessonCount +=
-                CountOccurrencesInSemester(
-                    baseLesson,
-                    semester);
+            foreach (var baseLesson in lessons)
+            {
+                if (!SemesterCalendar.IsLessonIncluded(
+                        baseLesson.WeekProperty,
+                        calendarWeek.WeekProperty))
+                {
+                    continue;
+                }
+
+                DateTime lessonDate =
+                    SemesterCalendar.GetLessonDate(
+                        calendarWeek.WeekStartDate,
+                        baseLesson.WeekDay);
+
+                if (lessonDate >=
+                        semester.StartDate.Date &&
+                    lessonDate <=
+                        semester.EndDate.Date)
+                {
+                    totalLessonCount++;
+                }
+            }
         }
 
         return totalLessonCount;
-    }
-
-    private static int CountOccurrencesInSemester(
-        BaseLesson baseLesson,
-        Semester semester)
-    {
-        DateTime semesterStart =
-            semester.StartDate.Date;
-
-        DateTime semesterEnd =
-            semester.EndDate.Date;
-
-        int occurrences = 0;
-
-        for (
-            DateTime currentDate = semesterStart;
-            currentDate <= semesterEnd;
-            currentDate = currentDate.AddDays(1))
-        {
-            if (!IsMatchingWeekDay(
-                    currentDate,
-                    baseLesson.WeekDay))
-            {
-                continue;
-            }
-
-            int weekIndex =
-                (currentDate - semesterStart).Days / 7;
-
-            bool isNumeratorWeek =
-                weekIndex % 2 == 0;
-
-            bool shouldInclude =
-                baseLesson.WeekProperty switch
-                {
-                    WeekProperty.EveryWeek =>
-                        true,
-
-                    WeekProperty.Numerator =>
-                        isNumeratorWeek,
-
-                    WeekProperty.Denominator =>
-                        !isNumeratorWeek,
-
-                    _ =>
-                        false
-                };
-
-            if (shouldInclude)
-            {
-                occurrences++;
-            }
-        }
-
-        return occurrences;
-    }
-
-    private static bool IsMatchingWeekDay(
-        DateTime date,
-        WeekDay weekDay)
-    {
-        DayOfWeek expectedDay =
-            weekDay switch
-            {
-                WeekDay.Monday =>
-                    DayOfWeek.Monday,
-
-                WeekDay.Tuesday =>
-                    DayOfWeek.Tuesday,
-
-                WeekDay.Wednesday =>
-                    DayOfWeek.Wednesday,
-
-                WeekDay.Thursday =>
-                    DayOfWeek.Thursday,
-
-                WeekDay.Friday =>
-                    DayOfWeek.Friday,
-
-                WeekDay.Saturday =>
-                    DayOfWeek.Saturday,
-
-                WeekDay.Sunday =>
-                    DayOfWeek.Sunday,
-
-                _ =>
-                    throw new ArgumentOutOfRangeException(
-                        nameof(weekDay),
-                        weekDay,
-                        "Невідомий день тижня.")
-            };
-
-        return date.DayOfWeek == expectedDay;
     }
 }
