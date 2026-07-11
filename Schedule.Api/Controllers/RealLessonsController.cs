@@ -419,13 +419,16 @@ public class RealLessonsController : ControllerBase
             });
         }
 
-        var conflictResult =
-            ValidateTransferredWeekConflicts(
-                realLessons);
+        string? internalConflictMessage =
+            RealLessonTransferConflictDetector
+                .FindInternalConflict(realLessons);
 
-        if (conflictResult != null)
+        if (internalConflictMessage != null)
         {
-            return conflictResult;
+            return Conflict(new
+            {
+                Message = internalConflictMessage
+            });
         }
 
         var existingWeekLessons =
@@ -438,14 +441,23 @@ public class RealLessonsController : ControllerBase
             )
             .ToList();
 
-        var existingConflictResult =
-            ValidateExistingScheduleConflicts(
+        var existingConflict =
+            RealLessonTransferConflictDetector
+                .FindExistingConflict(
                 realLessons,
                 existingWeekLessons);
 
-        if (existingConflictResult != null)
+        if (existingConflict != null)
         {
-            return existingConflictResult;
+            return Conflict(new
+            {
+                Message =
+                    "Перенесення неможливе, оскільки " +
+                    "реальний розклад уже містить " +
+                    "конфліктне заняття.",
+                ConflictingLessonId =
+                    existingConflict.Id
+            });
         }
 
         TransferRealLessonWeekResult transferResult;
