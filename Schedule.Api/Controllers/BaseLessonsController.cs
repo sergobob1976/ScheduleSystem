@@ -2,6 +2,7 @@
 using Schedule.Core.Enums;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
+using Schedule.Core.Services;
 
 namespace Schedule.Api.Controllers;
 
@@ -9,6 +10,8 @@ namespace Schedule.Api.Controllers;
 [Route("api/[controller]")]
 public class BaseLessonsController : ControllerBase
 {
+    private const int AcademicHoursPerLesson = 2;
+
     private readonly IBaseLessonRepository
         _baseLessonRepository;
 
@@ -21,13 +24,22 @@ public class BaseLessonsController : ControllerBase
     private readonly IClassRoomRepository
         _classRoomRepository;
 
+    private readonly ISemesterRepository
+        _semesterRepository;
+
+    private readonly ITeacherSemesterLoadRepository
+        _teacherSemesterLoadRepository;
+
     public BaseLessonsController(
         IBaseLessonRepository baseLessonRepository,
         ITeachingAssignmentRepository
             teachingAssignmentRepository,
         IGroupDisciplineRepository
             groupDisciplineRepository,
-        IClassRoomRepository classRoomRepository)
+        IClassRoomRepository classRoomRepository,
+        ISemesterRepository semesterRepository,
+        ITeacherSemesterLoadRepository
+            teacherSemesterLoadRepository)
     {
         _baseLessonRepository =
             baseLessonRepository;
@@ -40,6 +52,12 @@ public class BaseLessonsController : ControllerBase
 
         _classRoomRepository =
             classRoomRepository;
+
+        _semesterRepository =
+            semesterRepository;
+
+        _teacherSemesterLoadRepository =
+            teacherSemesterLoadRepository;
     }
 
     [HttpGet]
@@ -102,6 +120,14 @@ public class BaseLessonsController : ControllerBase
         if (conflictResult != null)
         {
             return conflictResult;
+        }
+
+        var hoursResult =
+            await ValidateHoursAsync(lesson);
+
+        if (hoursResult != null)
+        {
+            return hoursResult;
         }
 
         int newId =
@@ -172,6 +198,14 @@ public class BaseLessonsController : ControllerBase
         if (conflictResult != null)
         {
             return conflictResult;
+        }
+
+        var hoursResult =
+            await ValidateHoursAsync(lesson, id);
+
+        if (hoursResult != null)
+        {
+            return hoursResult;
         }
 
         bool updated =
@@ -419,5 +453,165 @@ public class BaseLessonsController : ControllerBase
         }
 
         return null;
+    }
+
+    private async Task<ActionResult?>
+        ValidateHoursAsync(
+            BaseLesson lesson,
+            int? excludedId = null)
+    {
+        var assignment =
+            await _teachingAssignmentRepository
+                .GetByIdAsync(
+                    lesson.TeachingAssignmentId!.Value);
+
+        if (assignment == null)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Обране призначення викладача не знайдено."
+            });
+        }
+
+        var semester =
+            await _semesterRepository.GetByIdAsync(
+                lesson.SemesterId);
+
+        if (semester == null)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Семестр для заняття не знайдено."
+            });
+        }
+
+        var existingLessons =
+            (
+                await _baseLessonRepository.GetAllAsync()
+            )
+            .Where(
+                existing =>
+                    existing.SemesterId ==
+                    lesson.SemesterId &&
+                    (!excludedId.HasValue ||
+                     existing.Id != excludedId.Value))
+            .ToList();
+
+        int candidateHours =
+            CountScheduledHours(lesson, semester);
+
+        int assignmentScheduledHours =
+            existingLessons
+                .Where(
+                    existing =>
+                        existing.TeachingAssignmentId ==
+                        lesson.TeachingAssignmentId)
+                .Sum(
+                    existing =>
+                        CountScheduledHours(
+                            existing,
+                            semester)) +
+            candidateHours;
+
+        if (assignmentScheduledHours >
+            assignment.AssignedHours)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Заняття перевищує кількість годин, " +
+                    "призначених викладачу для цієї " +
+                    "дисципліни та виду заняття.",
+                AssignedHours =
+                    assignment.AssignedHours,
+                ScheduledHours =
+                    assignmentScheduledHours,
+                ExceededHours =
+                    assignmentScheduledHours -
+                    assignment.AssignedHours
+            });
+        }
+
+        var teacherSemesterLoad =
+            await _teacherSemesterLoadRepository
+                .GetByTeacherAndSemesterAsync(
+                    lesson.TeacherId,
+                    lesson.SemesterId);
+
+        if (teacherSemesterLoad == null)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Для викладача не задано планове " +
+                    "навантаження на цей семестр."
+            });
+        }
+
+        int teacherScheduledHours =
+            existingLessons
+                .Where(
+                    existing =>
+                        existing.TeacherId ==
+                        lesson.TeacherId)
+                .Sum(
+                    existing =>
+                        CountScheduledHours(
+                            existing,
+                            semester)) +
+            candidateHours;
+
+        if (teacherScheduledHours >
+            teacherSemesterLoad.PlannedHours)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Заняття перевищує планове " +
+                    "навантаження викладача на семестр.",
+                PlannedHours =
+                    teacherSemesterLoad.PlannedHours,
+                ScheduledHours =
+                    teacherScheduledHours,
+                ExceededHours =
+                    teacherScheduledHours -
+                    teacherSemesterLoad.PlannedHours
+            });
+        }
+
+        return null;
+    }
+
+    private static int CountScheduledHours(
+        BaseLesson lesson,
+        Semester semester)
+    {
+        int lessonCount = 0;
+
+        foreach (var calendarWeek in
+                 SemesterCalendar.GetWeeks(semester))
+        {
+            if (!SemesterCalendar.IsLessonIncluded(
+                    lesson.WeekProperty,
+                    calendarWeek.WeekProperty))
+            {
+                continue;
+            }
+
+            DateTime lessonDate =
+                SemesterCalendar.GetLessonDate(
+                    calendarWeek.WeekStartDate,
+                    lesson.WeekDay);
+
+            if (lessonDate >= semester.StartDate.Date &&
+                lessonDate <= semester.EndDate.Date)
+            {
+                lessonCount++;
+            }
+        }
+
+        return lessonCount * AcademicHoursPerLesson;
     }
 }
