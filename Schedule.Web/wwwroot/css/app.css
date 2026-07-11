@@ -38,7 +38,7 @@
 }
 
     .blazor-error-boundary::after {
-        content: "An error has occurred."
+        content: "Сталася помилка."
     }
 
 .loading-progress {
@@ -72,7 +72,7 @@
 }
 
     .loading-progress-text:after {
-        content: var(--blazor-load-percentage-text, "Loading");
+    content: var(--blazor-load-percentage-text, "Завантаження");
     }
 
 code {
