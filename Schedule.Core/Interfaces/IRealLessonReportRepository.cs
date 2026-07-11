@@ -10,4 +10,11 @@ public interface IRealLessonReportRepository
             int groupId,
             DateTime reportDate,
             int academicHoursPerLesson);
+
+    Task<IEnumerable<TeacherDisciplineHoursItem>>
+        GetTeacherDisciplineHoursAsync(
+            int semesterId,
+            int teacherId,
+            DateTime reportDate,
+            int academicHoursPerLesson);
 }

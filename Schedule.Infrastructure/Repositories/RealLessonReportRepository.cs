@@ -161,4 +161,131 @@ public class RealLessonReportRepository
 
         return items;
     }
+
+    public async Task<
+        IEnumerable<TeacherDisciplineHoursItem>>
+        GetTeacherDisciplineHoursAsync(
+            int semesterId,
+            int teacherId,
+            DateTime reportDate,
+            int academicHoursPerLesson)
+    {
+        using var connection = CreateConnection();
+
+        const string sql = """
+            SELECT
+                tdl.Id AS TeacherDisciplineLoadId,
+                d.Id AS DisciplineId,
+                d.Name AS DisciplineName,
+                tdl.PlannedHours,
+
+                SUM(
+                    CASE
+                        WHEN rl.Status = 1
+                             AND rl.LessonDate <= @ReportDate
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS CompletedLessonCount,
+
+                SUM(
+                    CASE
+                        WHEN rl.Status = 0
+                             AND rl.LessonDate > @ReportDate
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS PlannedFutureLessonCount,
+
+                SUM(
+                    CASE
+                        WHEN rl.Status = 0
+                             AND rl.LessonDate <= @ReportDate
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS UnconfirmedPastLessonCount,
+
+                SUM(
+                    CASE
+                        WHEN rl.Status = 2
+                             AND rl.LessonDate <= @ReportDate
+                        THEN 1
+                        ELSE 0
+                    END
+                ) AS CancelledLessonCount
+
+            FROM `TeacherDisciplineLoads` tdl
+
+            INNER JOIN `TeacherSemesterLoads` tsl
+                ON tsl.Id = tdl.TeacherSemesterLoadId
+
+            INNER JOIN `Disciplines` d
+                ON d.Id = tdl.DisciplineId
+
+            LEFT JOIN `RealLessons` rl
+                ON rl.SemesterId = tsl.SemesterId
+                AND rl.TeacherId = tsl.TeacherId
+                AND rl.DisciplineId = tdl.DisciplineId
+
+            WHERE
+                tsl.SemesterId = @SemesterId
+                AND tsl.TeacherId = @TeacherId
+
+            GROUP BY
+                tdl.Id,
+                d.Id,
+                d.Name,
+                tdl.PlannedHours
+
+            ORDER BY d.Name;
+            """;
+
+        var items =
+            (
+                await connection.QueryAsync<
+                    TeacherDisciplineHoursItem>(
+                    sql,
+                    new
+                    {
+                        SemesterId = semesterId,
+                        TeacherId = teacherId,
+                        ReportDate = reportDate.Date
+                    })
+            ).ToList();
+
+        foreach (var item in items)
+        {
+            item.CompletedHours =
+                item.CompletedLessonCount *
+                academicHoursPerLesson;
+
+            item.PlannedFutureHours =
+                item.PlannedFutureLessonCount *
+                academicHoursPerLesson;
+
+            item.UnconfirmedPastHours =
+                item.UnconfirmedPastLessonCount *
+                academicHoursPerLesson;
+
+            item.CancelledHours =
+                item.CancelledLessonCount *
+                academicHoursPerLesson;
+
+            item.RemainingHours = Math.Max(
+                0,
+                item.PlannedHours -
+                item.CompletedHours);
+
+            item.ExceededHours = Math.Max(
+                0,
+                item.CompletedHours -
+                item.PlannedHours);
+
+            item.IsExceeded =
+                item.ExceededHours > 0;
+        }
+
+        return items;
+    }
 }
