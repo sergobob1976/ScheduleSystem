@@ -126,6 +126,52 @@ public class RealLessonRepository : IRealLessonRepository
             new { TeacherId = teacherId });
     }
 
+    public async Task<IEnumerable<RealLesson>>
+        GetConflictingLessonsAsync(
+            RealLesson lesson,
+            int? excludedId = null)
+    {
+        using var connection = CreateConnection();
+
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE
+                rl.SemesterId = @SemesterId
+                AND rl.LessonDate = @LessonDate
+                AND rl.LessonPosition = @LessonPosition
+                AND
+                (
+                    rl.GroupId = @GroupId
+                    OR rl.TeacherId = @TeacherId
+                    OR
+                    (
+                        @ClassRoomId IS NOT NULL
+                        AND rl.ClassRoomId = @ClassRoomId
+                    )
+                )
+                AND
+                (
+                    @ExcludedId IS NULL
+                    OR rl.Id <> @ExcludedId
+                )
+            ORDER BY rl.Id;
+            """;
+
+        return await QueryAsync(
+            connection,
+            sql,
+            new
+            {
+                lesson.SemesterId,
+                LessonDate = lesson.LessonDate.Date,
+                lesson.LessonPosition,
+                lesson.GroupId,
+                lesson.TeacherId,
+                lesson.ClassRoomId,
+                ExcludedId = excludedId
+            });
+    }
+
     public async Task<int> CreateAsync(
         RealLesson lesson)
     {

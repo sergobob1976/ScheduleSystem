@@ -274,6 +274,14 @@ public class RealLessonsController : ControllerBase
             return validationResult;
         }
 
+        var conflictResult =
+            await ValidateConflictsAsync(lesson);
+
+        if (conflictResult != null)
+        {
+            return conflictResult;
+        }
+
         int newId =
             await _lessonRepository.CreateAsync(lesson);
 
@@ -541,6 +549,14 @@ public class RealLessonsController : ControllerBase
         if (validationResult != null)
         {
             return validationResult;
+        }
+
+        var conflictResult =
+            await ValidateConflictsAsync(lesson, id);
+
+        if (conflictResult != null)
+        {
+            return conflictResult;
         }
 
         bool updated =
@@ -998,6 +1014,78 @@ public class RealLessonsController : ControllerBase
                         "реальний розклад уже містить " +
                         "конфліктне заняття.",
                     ConflictingLessonId = conflict.Id
+                });
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<ActionResult?>
+        ValidateConflictsAsync(
+            RealLesson lesson,
+            int? excludedId = null)
+    {
+        var conflicts =
+            (
+                await _lessonRepository
+                    .GetConflictingLessonsAsync(
+                        lesson,
+                        excludedId)
+            ).ToList();
+
+        var groupConflict =
+            conflicts.FirstOrDefault(
+                existing =>
+                    existing.GroupId == lesson.GroupId);
+
+        if (groupConflict != null)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Обрана група вже має заняття " +
+                    "на цю дату й пару.",
+                ConflictingLessonId =
+                    groupConflict.Id
+            });
+        }
+
+        var teacherConflict =
+            conflicts.FirstOrDefault(
+                existing =>
+                    existing.TeacherId ==
+                    lesson.TeacherId);
+
+        if (teacherConflict != null)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Обраний викладач уже проводить " +
+                    "інше заняття на цю дату й пару.",
+                ConflictingLessonId =
+                    teacherConflict.Id
+            });
+        }
+
+        if (lesson.ClassRoomId.HasValue)
+        {
+            var classRoomConflict =
+                conflicts.FirstOrDefault(
+                    existing =>
+                        existing.ClassRoomId ==
+                        lesson.ClassRoomId);
+
+            if (classRoomConflict != null)
+            {
+                return Conflict(new
+                {
+                    Message =
+                        "Обрана аудиторія вже зайнята " +
+                        "на цю дату й пару.",
+                    ConflictingLessonId =
+                        classRoomConflict.Id
                 });
             }
         }

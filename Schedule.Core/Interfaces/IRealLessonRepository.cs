@@ -17,6 +17,11 @@ public interface IRealLessonRepository
     Task<IEnumerable<RealLesson>> GetByGroupIdAsync(int groupId);
     Task<IEnumerable<RealLesson>> GetByTeacherIdAsync(int teacherId);
 
+    Task<IEnumerable<RealLesson>>
+        GetConflictingLessonsAsync(
+            RealLesson lesson,
+            int? excludedId = null);
+
     Task<int> CreateAsync(RealLesson lesson);
     Task<bool> UpdateAsync(RealLesson lesson);
 
