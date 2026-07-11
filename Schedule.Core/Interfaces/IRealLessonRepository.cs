@@ -35,4 +35,7 @@ public interface IRealLessonRepository
         DateTime weekEndDate,
         WeekProperty weekProperty,
         IReadOnlyCollection<RealLesson> lessons);
+
+    Task<IEnumerable<TransferredRealLessonWeekItem>>
+        GetTransferredWeeksAsync(int semesterId);
 }

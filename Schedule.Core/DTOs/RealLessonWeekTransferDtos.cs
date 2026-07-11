@@ -32,3 +32,23 @@ public enum TransferRealLessonWeekResult
     Created = 1,
     AlreadyTransferred = 2
 }
+
+public class TransferredRealLessonWeekItem
+{
+    public int Id { get; set; }
+
+    public int SemesterId { get; set; }
+
+    public DateTime WeekStartDate { get; set; }
+
+    public DateTime WeekEndDate { get; set; }
+
+    public WeekProperty WeekProperty { get; set; }
+
+    public string WeekPropertyName { get; set; } =
+        string.Empty;
+
+    public int LessonCount { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+}

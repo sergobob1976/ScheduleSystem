@@ -91,6 +91,52 @@ public class RealLessonsController : ControllerBase
         return Ok(lessons);
     }
 
+    [HttpGet(
+        "transferred-weeks/semester/{semesterId:int}")]
+    public async Task<
+        ActionResult<IEnumerable<
+            TransferredRealLessonWeekItem>>>
+        GetTransferredWeeks(int semesterId)
+    {
+        if (semesterId <= 0)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Потрібно обрати семестр."
+            });
+        }
+
+        var semester =
+            await _semesterRepository.GetByIdAsync(
+                semesterId);
+
+        if (semester == null)
+        {
+            return NotFound(new
+            {
+                Message =
+                    $"Семестр з ID {semesterId} " +
+                    "не знайдено."
+            });
+        }
+
+        var weeks =
+            (
+                await _lessonRepository
+                    .GetTransferredWeeksAsync(semesterId)
+            ).ToList();
+
+        foreach (var week in weeks)
+        {
+            week.WeekPropertyName =
+                week.WeekProperty
+                    .ToUkranianString();
+        }
+
+        return Ok(weeks);
+    }
+
     [HttpGet("group/{groupId:int}/date/{date:datetime}")]
     public async Task<ActionResult<IEnumerable<RealLesson>>>
         GetByGroupAndDate(

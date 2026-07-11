@@ -380,6 +380,50 @@ public class RealLessonRepository : IRealLessonRepository
         return TransferRealLessonWeekResult.Created;
     }
 
+    public async Task<
+        IEnumerable<TransferredRealLessonWeekItem>>
+        GetTransferredWeeksAsync(int semesterId)
+    {
+        using var connection = CreateConnection();
+
+        const string sql = """
+            SELECT
+                wt.Id,
+                wt.SemesterId,
+                wt.WeekStartDate,
+                wt.WeekEndDate,
+                wt.WeekProperty,
+                wt.CreatedAt,
+                COUNT(lesson.Id) AS LessonCount
+
+            FROM `RealLessonWeekTransfers` wt
+
+            LEFT JOIN `RealLessons` lesson
+                ON lesson.SemesterId = wt.SemesterId
+                AND lesson.LessonDate >=
+                    wt.WeekStartDate
+                AND lesson.LessonDate <=
+                    wt.WeekEndDate
+
+            WHERE wt.SemesterId = @SemesterId
+
+            GROUP BY
+                wt.Id,
+                wt.SemesterId,
+                wt.WeekStartDate,
+                wt.WeekEndDate,
+                wt.WeekProperty,
+                wt.CreatedAt
+
+            ORDER BY wt.WeekStartDate;
+            """;
+
+        return await connection.QueryAsync<
+            TransferredRealLessonWeekItem>(
+            sql,
+            new { SemesterId = semesterId });
+    }
+
     private static async Task<IEnumerable<RealLesson>>
         QueryAsync(
             IDbConnection connection,
