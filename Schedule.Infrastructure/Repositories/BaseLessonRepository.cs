@@ -1,12 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Data;
 using Dapper;
-using MySqlConnector;
 using Microsoft.Extensions.Configuration;
+using MySqlConnector;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 
@@ -16,80 +11,111 @@ public class BaseLessonRepository : IBaseLessonRepository
 {
     private readonly string _connectionString;
 
-    public BaseLessonRepository(IConfiguration configuration)
+    private const string BaseJoinSql = """
+        SELECT
+            bl.*,
+            g.*,
+            t.*,
+            d.*,
+            c.*,
+            s.*
+
+        FROM `BaseLessons` bl
+
+        INNER JOIN `Groups` g
+            ON g.Id = bl.GroupId
+
+        INNER JOIN `Teachers` t
+            ON t.Id = bl.TeacherId
+
+        INNER JOIN `Disciplines` d
+            ON d.Id = bl.DisciplineId
+
+        LEFT JOIN `ClassRooms` c
+            ON c.Id = bl.ClassRoomId
+
+        INNER JOIN `Semesters` s
+            ON s.Id = bl.SemesterId
+        """;
+
+    public BaseLessonRepository(
+        IConfiguration configuration)
     {
-        _connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Рядок підключення не знайдено.");
+        _connectionString =
+            configuration.GetConnectionString(
+                "DefaultConnection")
+            ?? throw new InvalidOperationException(
+                "Рядок підключення не знайдено.");
     }
 
-    private IDbConnection CreateConnection() => new MySqlConnection(_connectionString);
-
-    private const string BaseJoinSql = @"
-        SELECT 
-            bl.*, g.*, t.*, d.*, c.*, s.*
-        FROM `BaseLessons` bl
-        INNER JOIN `Groups` g ON bl.GroupId = g.Id
-        INNER JOIN `Teachers` t ON bl.TeacherId = t.Id
-        INNER JOIN `Disciplines` d ON bl.DisciplineId = d.Id
-        LEFT JOIN `ClassRooms` c ON bl.ClassRoomId = c.Id
-        INNER JOIN `Semesters` s ON bl.SemesterId = s.Id";
-
-    private readonly Func<BaseLesson, Group, Teacher, Discipline, ClassRoom, Semester, BaseLesson> _lessonMapper =
-        (lesson, group, teacher, discipline, classroom, semester) =>
-        {
-            lesson.Group = group;
-            lesson.Teacher = teacher;
-            lesson.Discipline = discipline;
-            lesson.ClassRoom = classroom;
-            lesson.Semester = semester;
-            return lesson;
-        };
+    private IDbConnection CreateConnection()
+    {
+        return new MySqlConnection(_connectionString);
+    }
 
     public async Task<IEnumerable<BaseLesson>> GetAllAsync()
     {
         using var connection = CreateConnection();
 
-        return await connection.QueryAsync<BaseLesson, Group, Teacher, Discipline, ClassRoom, Semester, BaseLesson>(
-            BaseJoinSql,
-            _lessonMapper,
-            splitOn: "Id,Id,Id,Id,Id");
+        string sql = $"""
+            {BaseJoinSql}
+            ORDER BY
+                s.StartDate DESC,
+                g.Name,
+                bl.WeekDay,
+                bl.LessonPosition;
+            """;
+
+        return await QueryAsync(connection, sql);
     }
 
     public async Task<BaseLesson?> GetByIdAsync(int id)
     {
         using var connection = CreateConnection();
 
-        string sql = $"{BaseJoinSql} WHERE bl.Id = @Id";
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE bl.Id = @Id;
+            """;
 
-        var results = await connection.QueryAsync<BaseLesson, Group, Teacher, Discipline, ClassRoom, Semester, BaseLesson>(
-            sql,
-            _lessonMapper,
-            new { Id = id },
-            splitOn: "Id,Id,Id,Id,Id");
+        var results =
+            await QueryAsync(
+                connection,
+                sql,
+                new { Id = id });
 
         return results.FirstOrDefault();
     }
 
-    public async Task<IEnumerable<BaseLesson>> GetByGroupIdAsync(int groupId)
+    public async Task<IEnumerable<BaseLesson>>
+        GetByGroupIdAsync(int groupId)
     {
         using var connection = CreateConnection();
 
-        string sql = $"{BaseJoinSql} WHERE bl.GroupId = @GroupId ORDER BY bl.WeekDay, bl.LessonPosition";
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE bl.GroupId = @GroupId
+            ORDER BY
+                s.StartDate DESC,
+                bl.WeekDay,
+                bl.LessonPosition;
+            """;
 
-        return await connection.QueryAsync<BaseLesson, Group, Teacher, Discipline, ClassRoom, Semester, BaseLesson>(
+        return await QueryAsync(
+            connection,
             sql,
-            _lessonMapper,
-            new { GroupId = groupId },
-            splitOn: "Id,Id,Id,Id,Id");
+            new { GroupId = groupId });
     }
 
-    public async Task<int> CreateAsync(BaseLesson lesson)
+    public async Task<int> CreateAsync(
+        BaseLesson lesson)
     {
         using var connection = CreateConnection();
 
-        string sql = @"
+        const string sql = """
             INSERT INTO `BaseLessons`
             (
+                TeachingAssignmentId,
                 GroupId,
                 TeacherId,
                 DisciplineId,
@@ -102,6 +128,7 @@ public class BaseLessonRepository : IBaseLessonRepository
             )
             VALUES
             (
+                @TeachingAssignmentId,
                 @GroupId,
                 @TeacherId,
                 @DisciplineId,
@@ -113,18 +140,24 @@ public class BaseLessonRepository : IBaseLessonRepository
                 @LessonType
             );
 
-            SELECT LAST_INSERT_ID();";
+            SELECT LAST_INSERT_ID();
+            """;
 
-        return await connection.ExecuteScalarAsync<int>(sql, lesson);
+        return await connection.ExecuteScalarAsync<int>(
+            sql,
+            lesson);
     }
 
-    public async Task<bool> UpdateAsync(BaseLesson lesson)
+    public async Task<bool> UpdateAsync(
+        BaseLesson lesson)
     {
         using var connection = CreateConnection();
 
-        string sql = @"
+        const string sql = """
             UPDATE `BaseLessons`
             SET
+                TeachingAssignmentId =
+                    @TeachingAssignmentId,
                 GroupId = @GroupId,
                 TeacherId = @TeacherId,
                 DisciplineId = @DisciplineId,
@@ -134,9 +167,14 @@ public class BaseLessonRepository : IBaseLessonRepository
                 WeekDay = @WeekDay,
                 WeekProperty = @WeekProperty,
                 LessonType = @LessonType
-            WHERE Id = @Id";
+            WHERE Id = @Id;
+            """;
 
-        int rowsAffected = await connection.ExecuteAsync(sql, lesson);
+        int rowsAffected =
+            await connection.ExecuteAsync(
+                sql,
+                lesson);
+
         return rowsAffected > 0;
     }
 
@@ -144,9 +182,52 @@ public class BaseLessonRepository : IBaseLessonRepository
     {
         using var connection = CreateConnection();
 
-        string sql = "DELETE FROM `BaseLessons` WHERE Id = @Id";
+        const string sql = """
+            DELETE FROM `BaseLessons`
+            WHERE Id = @Id;
+            """;
 
-        int rowsAffected = await connection.ExecuteAsync(sql, new { Id = id });
+        int rowsAffected =
+            await connection.ExecuteAsync(
+                sql,
+                new { Id = id });
+
         return rowsAffected > 0;
+    }
+
+    private static async Task<IEnumerable<BaseLesson>>
+        QueryAsync(
+            IDbConnection connection,
+            string sql,
+            object? parameters = null)
+    {
+        return await connection.QueryAsync<
+            BaseLesson,
+            Group,
+            Teacher,
+            Discipline,
+            ClassRoom,
+            Semester,
+            BaseLesson>(
+            sql,
+            (
+                lesson,
+                group,
+                teacher,
+                discipline,
+                classRoom,
+                semester
+            ) =>
+            {
+                lesson.Group = group;
+                lesson.Teacher = teacher;
+                lesson.Discipline = discipline;
+                lesson.ClassRoom = classRoom;
+                lesson.Semester = semester;
+
+                return lesson;
+            },
+            parameters,
+            splitOn: "Id,Id,Id,Id,Id");
     }
 }
