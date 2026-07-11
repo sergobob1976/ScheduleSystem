@@ -2,6 +2,7 @@
 @using Schedule.Core.DTOs
 @using Schedule.Core.Models
 @using Schedule.Core.Enums
+@using System.Text.Json
 @inject HttpClient Http
 
 <h1 class="h3 mb-3">Базовий розклад</h1>
@@ -22,6 +23,7 @@
 </div></div>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
+else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-success">@successMessage</div> }
 else if (data is not null)
 {
     @if (showEditor)
@@ -114,6 +116,7 @@ else if (data is not null)
     private int groupId;
     private bool isLoading;
     private string errorMessage = "";
+    private string successMessage = "";
     private bool showEditor;
     private WeekDay editorDay;
     private int editorPosition;
@@ -146,23 +149,33 @@ else if (data is not null)
         var response = editingLessonId > 0
             ? await Http.PutAsJsonAsync($"api/BaseLessons/{editingLessonId}", lesson)
             : await Http.PostAsJsonAsync("api/BaseLessons", lesson);
-        if (!response.IsSuccessStatusCode) { errorMessage = await response.Content.ReadAsStringAsync(); return; }
-        showEditor = false; await LoadBuilder();
+        if (!response.IsSuccessStatusCode) { errorMessage = await ReadApiMessage(response); return; }
+        var updated = editingLessonId > 0; showEditor = false; editingLessonId = 0; await LoadBuilder();
+        successMessage = updated ? "Заняття успішно оновлено." : "Заняття успішно створено.";
     }
 
     private async Task DeleteLesson(int id)
     {
         errorMessage = "";
         var response = await Http.DeleteAsync($"api/BaseLessons/{id}");
-        if (!response.IsSuccessStatusCode) { errorMessage = await response.Content.ReadAsStringAsync(); return; }
+        if (!response.IsSuccessStatusCode) { errorMessage = await ReadApiMessage(response); return; }
         if (editingLessonId == id) CloseEditor();
         await LoadBuilder();
+        successMessage = "Заняття успішно видалено.";
+    }
+
+    private static async Task<string> ReadApiMessage(HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+        try { using var json = JsonDocument.Parse(content); if (json.RootElement.TryGetProperty("message", out var value)) return value.GetString() ?? "Операцію не виконано."; }
+        catch (JsonException) { }
+        return string.IsNullOrWhiteSpace(content) ? "Операцію не виконано." : content;
     }
 
     private async Task LoadBuilder()
     {
         if (semesterId <= 0 || groupId <= 0) { errorMessage = "Оберіть семестр і групу."; return; }
-        isLoading = true; errorMessage = "";
+        isLoading = true; errorMessage = ""; successMessage = "";
         try
         {
             var dataTask = Http.GetFromJsonAsync<BaseScheduleBuilderResponse>($"api/BaseScheduleBuilder/semester/{semesterId}/group/{groupId}");
