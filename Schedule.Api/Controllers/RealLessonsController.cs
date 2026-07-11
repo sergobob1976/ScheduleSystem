@@ -4,6 +4,7 @@ using Schedule.Core.DTOs;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
 using Schedule.Core.Services;
+using Schedule.Core.Extensions;
 
 namespace Schedule.Api.Controllers;
 
@@ -459,6 +460,60 @@ public class RealLessonsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPatch("{id:int}/status")]
+    public async Task<
+        ActionResult<UpdateRealLessonStatusResponse>>
+        UpdateStatus(
+            int id,
+            [FromBody]
+            UpdateRealLessonStatusRequest request)
+    {
+        if (!Enum.IsDefined(request.Status))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Вказано невідомий стан заняття."
+            });
+        }
+
+        var current =
+            await _lessonRepository.GetByIdAsync(id);
+
+        if (current == null)
+        {
+            return NotFound(new
+            {
+                Message =
+                    $"Заняття з ID {id} не знайдено."
+            });
+        }
+
+        bool updated =
+            await _lessonRepository.UpdateStatusAsync(
+                id,
+                request.Status);
+
+        if (!updated)
+        {
+            return NotFound(new
+            {
+                Message =
+                    $"Не вдалося оновити заняття з ID {id}."
+            });
+        }
+
+        return Ok(new UpdateRealLessonStatusResponse
+        {
+            LessonId = id,
+            Status = request.Status,
+            StatusName =
+                request.Status.ToUkranianString(),
+            Message =
+                "Стан заняття успішно оновлено."
+        });
+    }
+
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
@@ -621,6 +676,15 @@ public class RealLessonsController : ControllerBase
             {
                 Message =
                     "Вказано невідому властивість тижня."
+            });
+        }
+
+        if (!Enum.IsDefined(lesson.Status))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Вказано невідомий стан заняття."
             });
         }
 

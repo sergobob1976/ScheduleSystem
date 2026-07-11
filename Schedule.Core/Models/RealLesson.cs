@@ -45,6 +45,13 @@ public class RealLesson
 
     public required LessonType LessonType { get; set; }
 
+    /// <summary>
+    /// Стан фактичного заняття для обліку
+    /// вичитаних навчальних годин.
+    /// </summary>
+    public RealLessonStatus Status { get; set; } =
+        RealLessonStatus.Planned;
+
     public string? ConferenceLink { get; set; }
 
     public string? ResourceLink { get; set; }

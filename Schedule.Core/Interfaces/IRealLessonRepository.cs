@@ -23,6 +23,10 @@ public interface IRealLessonRepository
     // Окремий швидкий метод суто для викладачів, щоб оновлювати ЛІНКИ
     Task<bool> UpdateLinksAsync(int lessonId, string? conferenceLink, string? resourceLink);
 
+    Task<bool> UpdateStatusAsync(
+        int lessonId,
+        RealLessonStatus status);
+
     Task<bool> DeleteAsync(int id);
 
     Task<TransferRealLessonWeekResult> TransferWeekAsync(

@@ -347,6 +347,7 @@ public class DatabaseInitializer
                 `WeekDay` INT NOT NULL,
                 `WeekProperty` INT NOT NULL,
                 `LessonType` INT NOT NULL,
+                `Status` INT NOT NULL DEFAULT 0,
 
                 `ConferenceLink` VARCHAR(500) NULL,
                 `ResourceLink` VARCHAR(500) NULL,
@@ -383,6 +384,7 @@ public class DatabaseInitializer
                     ON DELETE CASCADE,
 
                 CHECK (`LessonPosition` BETWEEN 1 AND 8),
+                CHECK (`Status` IN (0, 1, 2)),
 
                 INDEX `IX_RealLessons_TeachingAssignment`
                     (`TeachingAssignmentId`),
@@ -504,6 +506,16 @@ public class DatabaseInitializer
             ALTER TABLE `Semesters`
             ADD COLUMN `FirstWeekProperty` INT NOT NULL DEFAULT 1
             AFTER `EndDate`;
+            """);
+
+        EnsureColumn(
+            connection,
+            "RealLessons",
+            "Status",
+            """
+            ALTER TABLE `RealLessons`
+            ADD COLUMN `Status` INT NOT NULL DEFAULT 0
+            AFTER `LessonType`;
             """);
 
         EnsureColumn(

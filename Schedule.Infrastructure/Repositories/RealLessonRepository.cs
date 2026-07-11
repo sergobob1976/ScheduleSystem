@@ -145,6 +145,7 @@ public class RealLessonRepository : IRealLessonRepository
                 WeekDay,
                 WeekProperty,
                 LessonType,
+                Status,
                 ConferenceLink,
                 ResourceLink
             )
@@ -161,6 +162,7 @@ public class RealLessonRepository : IRealLessonRepository
                 @WeekDay,
                 @WeekProperty,
                 @LessonType,
+                @Status,
                 @ConferenceLink,
                 @ResourceLink
             );
@@ -193,6 +195,7 @@ public class RealLessonRepository : IRealLessonRepository
                 WeekDay = @WeekDay,
                 WeekProperty = @WeekProperty,
                 LessonType = @LessonType,
+                Status = @Status,
                 ConferenceLink = @ConferenceLink,
                 ResourceLink = @ResourceLink
             WHERE Id = @Id;
@@ -202,6 +205,30 @@ public class RealLessonRepository : IRealLessonRepository
             await connection.ExecuteAsync(
                 sql,
                 lesson);
+
+        return rowsAffected > 0;
+    }
+
+    public async Task<bool> UpdateStatusAsync(
+        int lessonId,
+        RealLessonStatus status)
+    {
+        using var connection = CreateConnection();
+
+        const string sql = """
+            UPDATE `RealLessons`
+            SET Status = @Status
+            WHERE Id = @Id;
+            """;
+
+        int rowsAffected =
+            await connection.ExecuteAsync(
+                sql,
+                new
+                {
+                    Id = lessonId,
+                    Status = status
+                });
 
         return rowsAffected > 0;
     }
@@ -320,6 +347,7 @@ public class RealLessonRepository : IRealLessonRepository
                 WeekDay,
                 WeekProperty,
                 LessonType,
+                Status,
                 ConferenceLink,
                 ResourceLink
             )
@@ -336,6 +364,7 @@ public class RealLessonRepository : IRealLessonRepository
                 @WeekDay,
                 @WeekProperty,
                 @LessonType,
+                @Status,
                 @ConferenceLink,
                 @ResourceLink
             );
