@@ -403,7 +403,8 @@ public class BaseLessonsController : ControllerBase
                 Message =
                     "Обрана група вже має заняття " +
                     "в цей день і на цій парі.",
-                ConflictType = "Group",
+                ConflictCode = "GROUP",
+                ConflictName = "Група",
                 ConflictingLessonId =
                     groupConflict.Id
             });
@@ -423,7 +424,8 @@ public class BaseLessonsController : ControllerBase
                     "Обраний викладач уже проводить " +
                     "інше заняття в цей день і " +
                     "на цій парі.",
-                ConflictType = "Teacher",
+                ConflictCode = "TEACHER",
+                ConflictName = "Викладач",
                 ConflictingLessonId =
                     teacherConflict.Id
             });
@@ -444,7 +446,8 @@ public class BaseLessonsController : ControllerBase
                     Message =
                         "Обрана аудиторія вже зайнята " +
                         "в цей день і на цій парі.",
-                    ConflictType = "ClassRoom",
+                    ConflictCode = "CLASS_ROOM",
+                    ConflictName = "Аудиторія",
                     ConflictingLessonId =
                         classRoomConflict.Id
                 });
