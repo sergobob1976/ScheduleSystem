@@ -109,6 +109,26 @@ public class BaseLessonRepository : IBaseLessonRepository
     }
 
     public async Task<IEnumerable<BaseLesson>>
+        GetBySemesterIdAsync(int semesterId)
+    {
+        using var connection = CreateConnection();
+
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE bl.SemesterId = @SemesterId
+            ORDER BY
+                g.Name,
+                bl.WeekDay,
+                bl.LessonPosition;
+            """;
+
+        return await QueryAsync(
+            connection,
+            sql,
+            new { SemesterId = semesterId });
+    }
+
+    public async Task<IEnumerable<BaseLesson>>
         GetConflictingLessonsAsync(
             BaseLesson lesson,
             int? excludedId = null)

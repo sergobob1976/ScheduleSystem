@@ -11,6 +11,9 @@ public interface IBaseLessonRepository
     Task<IEnumerable<BaseLesson>> GetByGroupIdAsync(
         int groupId);
 
+    Task<IEnumerable<BaseLesson>> GetBySemesterIdAsync(
+        int semesterId);
+
     Task<IEnumerable<BaseLesson>> GetConflictingLessonsAsync(
         BaseLesson lesson,
         int? excludedId = null);

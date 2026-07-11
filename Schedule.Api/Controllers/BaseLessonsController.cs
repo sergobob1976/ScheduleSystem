@@ -488,14 +488,14 @@ public class BaseLessonsController : ControllerBase
 
         var existingLessons =
             (
-                await _baseLessonRepository.GetAllAsync()
+                await _baseLessonRepository
+                    .GetBySemesterIdAsync(
+                        lesson.SemesterId)
             )
             .Where(
                 existing =>
-                    existing.SemesterId ==
-                    lesson.SemesterId &&
-                    (!excludedId.HasValue ||
-                     existing.Id != excludedId.Value))
+                    !excludedId.HasValue ||
+                    existing.Id != excludedId.Value)
             .ToList();
 
         int candidateHours =

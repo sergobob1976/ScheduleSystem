@@ -486,12 +486,12 @@ public class RealLessonsController : ControllerBase
 
         var baseLessons =
             (
-                await _baseLessonRepository.GetAllAsync()
+                await _baseLessonRepository
+                    .GetBySemesterIdAsync(
+                        request.SemesterId)
             )
             .Where(
                 lesson =>
-                    lesson.SemesterId ==
-                    request.SemesterId &&
                     SemesterCalendar.IsLessonIncluded(
                         lesson.WeekProperty,
                         request.WeekProperty))
@@ -563,16 +563,12 @@ public class RealLessonsController : ControllerBase
 
         var existingWeekLessons =
             (
-                await _lessonRepository.GetAllAsync()
+                await _lessonRepository
+                    .GetBySemesterAndDateRangeAsync(
+                        request.SemesterId,
+                        weekStartDate,
+                        weekEndDate)
             )
-            .Where(
-                lesson =>
-                    lesson.SemesterId ==
-                    request.SemesterId &&
-                    lesson.LessonDate.Date >=
-                    weekStartDate &&
-                    lesson.LessonDate.Date <=
-                    weekEndDate)
             .ToList();
 
         var existingConflictResult =
