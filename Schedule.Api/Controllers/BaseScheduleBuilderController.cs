@@ -279,6 +279,47 @@ public class BaseScheduleBuilderController
                         });
             }
 
+            disciplineItem.TotalAssignedHours =
+                disciplineItem.TeachingAssignments
+                    .Sum(item => item.AssignedHours);
+
+            disciplineItem.UnassignedHours =
+                Math.Max(
+                    0,
+                    disciplineItem.TotalPlannedHours -
+                    disciplineItem.TotalAssignedHours);
+
+            disciplineItem.OverAssignedHours =
+                Math.Max(
+                    0,
+                    disciplineItem.TotalAssignedHours -
+                    disciplineItem.TotalPlannedHours);
+
+            disciplineItem.ScheduledLessonCount =
+                disciplineItem.TeachingAssignments
+                    .Sum(
+                        item =>
+                            item.ScheduledLessonCount);
+
+            disciplineItem.ScheduledHours =
+                disciplineItem.TeachingAssignments
+                    .Sum(item => item.ScheduledHours);
+
+            disciplineItem.RemainingScheduledHours =
+                Math.Max(
+                    0,
+                    disciplineItem.TotalPlannedHours -
+                    disciplineItem.ScheduledHours);
+
+            disciplineItem.ExceededScheduledHours =
+                Math.Max(
+                    0,
+                    disciplineItem.ScheduledHours -
+                    disciplineItem.TotalPlannedHours);
+
+            disciplineItem.IsScheduleExceeded =
+                disciplineItem.ExceededScheduledHours > 0;
+
             response.Disciplines.Add(
                 disciplineItem);
         }

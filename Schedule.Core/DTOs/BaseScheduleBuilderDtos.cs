@@ -48,6 +48,22 @@ public class BaseScheduleDisciplineItem
 
     public int OtherHours { get; set; }
 
+    public int TotalAssignedHours { get; set; }
+
+    public int UnassignedHours { get; set; }
+
+    public int OverAssignedHours { get; set; }
+
+    public int ScheduledLessonCount { get; set; }
+
+    public int ScheduledHours { get; set; }
+
+    public int RemainingScheduledHours { get; set; }
+
+    public int ExceededScheduledHours { get; set; }
+
+    public bool IsScheduleExceeded { get; set; }
+
     public List<BaseScheduleAssignmentItem>
         TeachingAssignments
     { get; set; } = [];
