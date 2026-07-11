@@ -1,7 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Schedule.Core.Enums;
+using Schedule.Core.DTOs;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
+using Schedule.Core.Services;
 
 namespace Schedule.Api.Controllers;
 
@@ -18,13 +20,16 @@ public class RealLessonsController : ControllerBase
         _classRoomRepository;
     private readonly ISemesterRepository
         _semesterRepository;
+    private readonly IBaseLessonRepository
+        _baseLessonRepository;
 
     public RealLessonsController(
         IRealLessonRepository lessonRepository,
         ITeachingAssignmentRepository teachingAssignmentRepository,
         IGroupDisciplineRepository groupDisciplineRepository,
         IClassRoomRepository classRoomRepository,
-        ISemesterRepository semesterRepository)
+        ISemesterRepository semesterRepository,
+        IBaseLessonRepository baseLessonRepository)
     {
         _lessonRepository = lessonRepository;
         _teachingAssignmentRepository =
@@ -33,6 +38,7 @@ public class RealLessonsController : ControllerBase
             groupDisciplineRepository;
         _classRoomRepository = classRoomRepository;
         _semesterRepository = semesterRepository;
+        _baseLessonRepository = baseLessonRepository;
     }
 
     [HttpGet]
@@ -156,6 +162,217 @@ public class RealLessonsController : ControllerBase
             nameof(GetById),
             new { id = created.Id },
             created);
+    }
+
+    [HttpPost("transfer-week")]
+    public async Task<
+        ActionResult<TransferRealLessonWeekResponse>>
+        TransferWeek(
+            [FromBody]
+            TransferRealLessonWeekRequest request)
+    {
+        if (request.SemesterId <= 0)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Потрібно обрати семестр."
+            });
+        }
+
+        if (request.WeekStartDate == default)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Потрібно вказати дату початку тижня."
+            });
+        }
+
+        if (request.WeekStartDate.DayOfWeek !=
+            DayOfWeek.Monday)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Датою початку тижня має бути понеділок."
+            });
+        }
+
+        if (request.WeekProperty is not
+            (WeekProperty.Numerator or
+             WeekProperty.Denominator))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Для перенесення потрібно обрати " +
+                    "чисельник або знаменник."
+            });
+        }
+
+        var semester =
+            await _semesterRepository.GetByIdAsync(
+                request.SemesterId);
+
+        if (semester == null)
+        {
+            return NotFound(new
+            {
+                Message =
+                    $"Семестр з ID {request.SemesterId} " +
+                    "не знайдено."
+            });
+        }
+
+        DateTime weekStartDate =
+            request.WeekStartDate.Date;
+
+        DateTime weekEndDate =
+            weekStartDate.AddDays(6);
+
+        if (weekEndDate < semester.StartDate.Date ||
+            weekStartDate > semester.EndDate.Date)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Обраний тиждень не належить семестру."
+            });
+        }
+
+        var baseLessons =
+            (
+                await _baseLessonRepository.GetAllAsync()
+            )
+            .Where(
+                lesson =>
+                    lesson.SemesterId ==
+                    request.SemesterId &&
+                    SemesterCalendar.IsLessonIncluded(
+                        lesson.WeekProperty,
+                        request.WeekProperty))
+            .ToList();
+
+        var realLessons = new List<RealLesson>();
+
+        foreach (var baseLesson in baseLessons)
+        {
+            if (!baseLesson.TeachingAssignmentId.HasValue ||
+                baseLesson.TeachingAssignmentId.Value <= 0)
+            {
+                return Conflict(new
+                {
+                    Message =
+                        $"Базове заняття з ID {baseLesson.Id} " +
+                        "не має призначення викладача."
+                });
+            }
+
+            DateTime lessonDate =
+                SemesterCalendar.GetLessonDate(
+                    weekStartDate,
+                    baseLesson.WeekDay);
+
+            if (lessonDate < semester.StartDate.Date ||
+                lessonDate > semester.EndDate.Date)
+            {
+                continue;
+            }
+
+            realLessons.Add(new RealLesson
+            {
+                TeachingAssignmentId =
+                    baseLesson.TeachingAssignmentId,
+                GroupId = baseLesson.GroupId,
+                TeacherId = baseLesson.TeacherId,
+                DisciplineId = baseLesson.DisciplineId,
+                ClassRoomId = baseLesson.ClassRoomId,
+                SemesterId = baseLesson.SemesterId,
+                LessonDate = lessonDate,
+                LessonPosition =
+                    baseLesson.LessonPosition,
+                WeekDay = baseLesson.WeekDay,
+                WeekProperty =
+                    request.WeekProperty,
+                LessonType = baseLesson.LessonType
+            });
+        }
+
+        if (realLessons.Count == 0)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "У базовому розкладі немає занять " +
+                    "для обраного типу тижня."
+            });
+        }
+
+        var conflictResult =
+            ValidateTransferredWeekConflicts(
+                realLessons);
+
+        if (conflictResult != null)
+        {
+            return conflictResult;
+        }
+
+        var existingWeekLessons =
+            (
+                await _lessonRepository.GetAllAsync()
+            )
+            .Where(
+                lesson =>
+                    lesson.SemesterId ==
+                    request.SemesterId &&
+                    lesson.LessonDate.Date >=
+                    weekStartDate &&
+                    lesson.LessonDate.Date <=
+                    weekEndDate)
+            .ToList();
+
+        var existingConflictResult =
+            ValidateExistingScheduleConflicts(
+                realLessons,
+                existingWeekLessons);
+
+        if (existingConflictResult != null)
+        {
+            return existingConflictResult;
+        }
+
+        var transferResult =
+            await _lessonRepository.TransferWeekAsync(
+                request.SemesterId,
+                weekStartDate,
+                weekEndDate,
+                request.WeekProperty,
+                realLessons);
+
+        if (transferResult ==
+            TransferRealLessonWeekResult
+                .AlreadyTransferred)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "Цей календарний тиждень уже " +
+                    "перенесено до реального розкладу."
+            });
+        }
+
+        return Ok(new TransferRealLessonWeekResponse
+        {
+            SemesterId = request.SemesterId,
+            WeekStartDate = weekStartDate,
+            WeekEndDate = weekEndDate,
+            WeekProperty = request.WeekProperty,
+            CreatedLessonCount = realLessons.Count,
+            Message =
+                "Тиждень успішно перенесено до " +
+                "реального розкладу."
+        });
     }
 
     [HttpPut("{id:int}")]
@@ -479,6 +696,116 @@ public class RealLessonsController : ControllerBase
         return string.IsNullOrWhiteSpace(value)
             ? null
             : value.Trim();
+    }
+
+    private ActionResult?
+        ValidateTransferredWeekConflicts(
+            IReadOnlyCollection<RealLesson> lessons)
+    {
+        var groupConflict = lessons
+            .GroupBy(
+                lesson => new
+                {
+                    lesson.GroupId,
+                    Date = lesson.LessonDate.Date,
+                    lesson.LessonPosition
+                })
+            .FirstOrDefault(group => group.Count() > 1);
+
+        if (groupConflict != null)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "У базовому розкладі виявлено " +
+                    "конфлікт занять групи."
+            });
+        }
+
+        var teacherConflict = lessons
+            .GroupBy(
+                lesson => new
+                {
+                    lesson.TeacherId,
+                    Date = lesson.LessonDate.Date,
+                    lesson.LessonPosition
+                })
+            .FirstOrDefault(group => group.Count() > 1);
+
+        if (teacherConflict != null)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "У базовому розкладі виявлено " +
+                    "конфлікт занять викладача."
+            });
+        }
+
+        var classRoomConflict = lessons
+            .Where(
+                lesson => lesson.ClassRoomId.HasValue)
+            .GroupBy(
+                lesson => new
+                {
+                    lesson.ClassRoomId,
+                    Date = lesson.LessonDate.Date,
+                    lesson.LessonPosition
+                })
+            .FirstOrDefault(group => group.Count() > 1);
+
+        if (classRoomConflict != null)
+        {
+            return Conflict(new
+            {
+                Message =
+                    "У базовому розкладі виявлено " +
+                    "конфлікт використання аудиторії."
+            });
+        }
+
+        return null;
+    }
+
+    private ActionResult?
+        ValidateExistingScheduleConflicts(
+            IReadOnlyCollection<RealLesson> newLessons,
+            IReadOnlyCollection<RealLesson> existingLessons)
+    {
+        foreach (var newLesson in newLessons)
+        {
+            var conflict = existingLessons.FirstOrDefault(
+                existing =>
+                    existing.LessonDate.Date ==
+                    newLesson.LessonDate.Date &&
+                    existing.LessonPosition ==
+                    newLesson.LessonPosition &&
+                    (
+                        existing.GroupId ==
+                        newLesson.GroupId ||
+                        existing.TeacherId ==
+                        newLesson.TeacherId ||
+                        (
+                            newLesson.ClassRoomId.HasValue &&
+                            existing.ClassRoomId ==
+                            newLesson.ClassRoomId
+                        )
+                    ));
+
+            if (conflict != null)
+            {
+                return Conflict(new
+                {
+                    Message =
+                        "Перенесення неможливе, оскільки " +
+                        "реальний розклад уже містить " +
+                        "конфліктне заняття.",
+                    ConflictingLessonId = conflict.Id
+                });
+            }
+        }
+
+        return null;
     }
 }
 

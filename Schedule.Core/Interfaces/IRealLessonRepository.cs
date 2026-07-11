@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 using Schedule.Core.Models;
+using Schedule.Core.DTOs;
+using Schedule.Core.Enums;
 
 namespace Schedule.Core.Interfaces;
 
@@ -22,4 +24,11 @@ public interface IRealLessonRepository
     Task<bool> UpdateLinksAsync(int lessonId, string? conferenceLink, string? resourceLink);
 
     Task<bool> DeleteAsync(int id);
+
+    Task<TransferRealLessonWeekResult> TransferWeekAsync(
+        int semesterId,
+        DateTime weekStartDate,
+        DateTime weekEndDate,
+        WeekProperty weekProperty,
+        IReadOnlyCollection<RealLesson> lessons);
 }

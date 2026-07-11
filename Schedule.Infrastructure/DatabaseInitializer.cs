@@ -398,6 +398,34 @@ public class DatabaseInitializer
             COLLATE=utf8mb4_unicode_ci;
 
 
+            CREATE TABLE IF NOT EXISTS `RealLessonWeekTransfers`
+            (
+                `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                `SemesterId` INT NOT NULL,
+                `WeekStartDate` DATE NOT NULL,
+                `WeekEndDate` DATE NOT NULL,
+                `WeekProperty` INT NOT NULL,
+                `CreatedAt` DATETIME NOT NULL
+                    DEFAULT CURRENT_TIMESTAMP,
+
+                CONSTRAINT
+                    `FK_RealLessonWeekTransfers_Semester`
+                    FOREIGN KEY (`SemesterId`)
+                    REFERENCES `Semesters` (`Id`)
+                    ON DELETE CASCADE,
+
+                UNIQUE KEY
+                    `UX_RealLessonWeekTransfers_Semester_Week`
+                    (`SemesterId`, `WeekStartDate`),
+
+                CHECK (`WeekEndDate` >= `WeekStartDate`),
+                CHECK (`WeekProperty` IN (1, 2))
+            )
+            ENGINE=InnoDB
+            DEFAULT CHARSET=utf8mb4
+            COLLATE=utf8mb4_unicode_ci;
+
+
             CREATE TABLE IF NOT EXISTS `BaseLessons`
             (
                 `Id` INT AUTO_INCREMENT PRIMARY KEY,

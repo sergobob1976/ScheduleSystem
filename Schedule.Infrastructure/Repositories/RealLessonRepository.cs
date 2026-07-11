@@ -4,6 +4,8 @@ using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
+using Schedule.Core.DTOs;
+using Schedule.Core.Enums;
 
 namespace Schedule.Infrastructure.Repositories;
 
@@ -247,6 +249,106 @@ public class RealLessonRepository : IRealLessonRepository
                 new { Id = id });
 
         return rowsAffected > 0;
+    }
+
+    public async Task<TransferRealLessonWeekResult>
+        TransferWeekAsync(
+            int semesterId,
+            DateTime weekStartDate,
+            DateTime weekEndDate,
+            WeekProperty weekProperty,
+            IReadOnlyCollection<RealLesson> lessons)
+    {
+        await using var connection =
+            new MySqlConnection(_connectionString);
+
+        await connection.OpenAsync();
+
+        await using var transaction =
+            await connection.BeginTransactionAsync();
+
+        const string transferSql = """
+            INSERT INTO `RealLessonWeekTransfers`
+            (
+                SemesterId,
+                WeekStartDate,
+                WeekEndDate,
+                WeekProperty
+            )
+            VALUES
+            (
+                @SemesterId,
+                @WeekStartDate,
+                @WeekEndDate,
+                @WeekProperty
+            );
+            """;
+
+        try
+        {
+            await connection.ExecuteAsync(
+                transferSql,
+                new
+                {
+                    SemesterId = semesterId,
+                    WeekStartDate = weekStartDate.Date,
+                    WeekEndDate = weekEndDate.Date,
+                    WeekProperty = weekProperty
+                },
+                transaction);
+        }
+        catch (MySqlException ex)
+            when (ex.Number == 1062)
+        {
+            await transaction.RollbackAsync();
+
+            return TransferRealLessonWeekResult
+                .AlreadyTransferred;
+        }
+
+        const string lessonSql = """
+            INSERT INTO `RealLessons`
+            (
+                TeachingAssignmentId,
+                GroupId,
+                TeacherId,
+                DisciplineId,
+                ClassRoomId,
+                SemesterId,
+                LessonDate,
+                LessonPosition,
+                WeekDay,
+                WeekProperty,
+                LessonType,
+                ConferenceLink,
+                ResourceLink
+            )
+            VALUES
+            (
+                @TeachingAssignmentId,
+                @GroupId,
+                @TeacherId,
+                @DisciplineId,
+                @ClassRoomId,
+                @SemesterId,
+                @LessonDate,
+                @LessonPosition,
+                @WeekDay,
+                @WeekProperty,
+                @LessonType,
+                @ConferenceLink,
+                @ResourceLink
+            );
+            """;
+
+        await connection.ExecuteAsync(
+            lessonSql,
+            lessons,
+            transaction);
+
+        await transaction.CommitAsync();
+
+        return TransferRealLessonWeekResult.Created;
     }
 
     private static async Task<IEnumerable<RealLesson>>
