@@ -18,6 +18,13 @@ public interface IRealLessonRepository
     Task<IEnumerable<RealLesson>> GetByTeacherIdAsync(int teacherId);
 
     Task<IEnumerable<RealLesson>>
+        GetBySemesterAndDateRangeAsync(
+            int semesterId,
+            DateTime startDate,
+            DateTime endDate,
+            int? groupId = null);
+
+    Task<IEnumerable<RealLesson>>
         GetConflictingLessonsAsync(
             RealLesson lesson,
             int? excludedId = null);

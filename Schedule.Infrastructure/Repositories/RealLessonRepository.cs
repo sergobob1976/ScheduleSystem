@@ -127,6 +127,44 @@ public class RealLessonRepository : IRealLessonRepository
     }
 
     public async Task<IEnumerable<RealLesson>>
+        GetBySemesterAndDateRangeAsync(
+            int semesterId,
+            DateTime startDate,
+            DateTime endDate,
+            int? groupId = null)
+    {
+        using var connection = CreateConnection();
+
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE
+                rl.SemesterId = @SemesterId
+                AND rl.LessonDate >= @StartDate
+                AND rl.LessonDate <= @EndDate
+                AND
+                (
+                    @GroupId IS NULL
+                    OR rl.GroupId = @GroupId
+                )
+            ORDER BY
+                rl.LessonDate,
+                rl.LessonPosition,
+                g.Name;
+            """;
+
+        return await QueryAsync(
+            connection,
+            sql,
+            new
+            {
+                SemesterId = semesterId,
+                StartDate = startDate.Date,
+                EndDate = endDate.Date,
+                GroupId = groupId
+            });
+    }
+
+    public async Task<IEnumerable<RealLesson>>
         GetConflictingLessonsAsync(
             RealLesson lesson,
             int? excludedId = null)

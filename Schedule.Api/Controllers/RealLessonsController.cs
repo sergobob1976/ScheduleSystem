@@ -92,6 +92,90 @@ public class RealLessonsController : ControllerBase
     }
 
     [HttpGet(
+        "semester/{semesterId:int}/week/{weekStartDate:datetime}")]
+    public async Task<
+        ActionResult<IEnumerable<RealLesson>>>
+        GetSemesterWeek(
+            int semesterId,
+            DateTime weekStartDate,
+            [FromQuery] int? groupId = null)
+    {
+        if (semesterId <= 0)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Потрібно обрати семестр."
+            });
+        }
+
+        if (weekStartDate == default)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Потрібно вказати дату початку тижня."
+            });
+        }
+
+        if (weekStartDate.DayOfWeek !=
+            DayOfWeek.Monday)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Датою початку тижня має бути понеділок."
+            });
+        }
+
+        if (groupId.HasValue && groupId.Value <= 0)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Потрібно обрати коректну групу."
+            });
+        }
+
+        var semester =
+            await _semesterRepository.GetByIdAsync(
+                semesterId);
+
+        if (semester == null)
+        {
+            return NotFound(new
+            {
+                Message =
+                    $"Семестр з ID {semesterId} " +
+                    "не знайдено."
+            });
+        }
+
+        DateTime startDate = weekStartDate.Date;
+        DateTime endDate = startDate.AddDays(6);
+
+        if (endDate < semester.StartDate.Date ||
+            startDate > semester.EndDate.Date)
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Обраний тиждень не належить семестру."
+            });
+        }
+
+        var lessons =
+            await _lessonRepository
+                .GetBySemesterAndDateRangeAsync(
+                    semesterId,
+                    startDate,
+                    endDate,
+                    groupId);
+
+        return Ok(lessons);
+    }
+
+    [HttpGet(
         "transferred-weeks/semester/{semesterId:int}")]
     public async Task<
         ActionResult<IEnumerable<
