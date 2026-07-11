@@ -56,6 +56,10 @@ builder.Services.AddScoped<
     BaseLessonRepository>();
 
 builder.Services.AddScoped<
+    IBaseScheduleReportRepository,
+    BaseScheduleReportRepository>();
+
+builder.Services.AddScoped<
     ISpecialtyRepository,
     SpecialtyRepository>();
 
