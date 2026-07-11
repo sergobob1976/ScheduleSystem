@@ -1054,6 +1054,8 @@ public class RealLessonsController : ControllerBase
                 Message =
                     "Обрана група вже має заняття " +
                     "на цю дату й пару.",
+                ConflictCode = "GROUP",
+                ConflictName = "Група",
                 ConflictingLessonId =
                     groupConflict.Id
             });
@@ -1072,6 +1074,8 @@ public class RealLessonsController : ControllerBase
                 Message =
                     "Обраний викладач уже проводить " +
                     "інше заняття на цю дату й пару.",
+                ConflictCode = "TEACHER",
+                ConflictName = "Викладач",
                 ConflictingLessonId =
                     teacherConflict.Id
             });
@@ -1092,6 +1096,8 @@ public class RealLessonsController : ControllerBase
                     Message =
                         "Обрана аудиторія вже зайнята " +
                         "на цю дату й пару.",
+                    ConflictCode = "CLASS_ROOM",
+                    ConflictName = "Аудиторія",
                     ConflictingLessonId =
                         classRoomConflict.Id
                 });
