@@ -1,201 +1,61 @@
-﻿@page "/schedule"
-@using Schedule.Core.Models
+@page "/schedule"
+@using Schedule.Core.DTOs
 @using Schedule.Core.Enums
+@using Schedule.Core.Models
+@using System.Text.Json
 @inject HttpClient Http
-@inject NavigationManager Navigation
 
-<div class="container-fluid py-2">
-    <div class="row">
+<h1 class="h3 mb-3">Реальний розклад</h1>
+<p class="text-muted">Перенесення базового шаблону календарними тижнями та керування фактичними заняттями.</p>
 
-        <div class="col-4">
-            <button class="btn btn-outline-secondary w-100 mb-3 fw-bold py-2 shadow-sm"
-                    @onclick='() => Navigation.NavigateTo("/")'>
-                🏠 Повернутися на головну
-            </button>
+<div class="card shadow-sm mb-4"><div class="card-body"><div class="row g-3 align-items-end">
+    <div class="col-md-4"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="LoadWeeks">
+        <option value="0">Оберіть семестр</option>@foreach (var item in semesters) { <option value="@item.Id">@item.Name</option> }
+    </select></div>
+    <div class="col-md-5"><label class="form-label fw-bold">Календарний тиждень</label><select class="form-select" @bind="weekStart" @bind:after="LoadSchedule">
+        <option value="">Оберіть тиждень</option>@foreach (var item in weeks) { <option value="@item.WeekStartDate.ToString("yyyy-MM-dd")">@item.ActiveStartDate.ToString("dd.MM")–@item.ActiveEndDate.ToString("dd.MM.yyyy") · @item.RecommendedWeekPropertyName @(item.IsTransferred ? "· перенесено" : "")</option> }
+    </select></div>
+    <div class="col-md-3"><button class="btn btn-primary w-100" disabled="@(SelectedWeek is null || SelectedWeek.IsTransferred)" @onclick="TransferWeek">Перенести тиждень</button></div>
+</div></div></div>
 
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0">✨ Опції додавання</h5>
-                </div>
-                <div class="card-body">
-                    @if (!string.IsNullOrEmpty(infoMessage))
-                    {
-                        <div class="alert alert-info py-2 small">@infoMessage</div>
-                    }
+@if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
+else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-success">@successMessage</div> }
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">🎒 Група:</label>
-                        <select class="form-select form-select-sm" @bind="selectedGroupId">
-                            <option value="0">-- Оберіть групу --</option>
-                            @if (groups != null)
-                            {
-                                @foreach (var g in groups)
-                                {
-                                    <option value="@g.Id">@g.Name</option>
-                                }
-                            }
-                        </select>
-                    </div>
+@if (SelectedWeek is not null)
+{
+    <div class="card shadow-sm mb-4"><div class="card-body d-flex flex-wrap gap-4 align-items-center">
+        <div><div class="small text-muted">Рекомендований тип</div><strong>@SelectedWeek.RecommendedWeekPropertyName</strong></div>
+        <div><div class="small text-muted">Фактично перенесено</div><strong>@(SelectedWeek.TransferredWeekPropertyName ?? "Ще не перенесено")</strong></div>
+        <div><label class="form-label small fw-bold mb-1">Тип для перенесення</label><select class="form-select form-select-sm" @bind="transferProperty"><option value="@WeekProperty.Numerator">Чисельник</option><option value="@WeekProperty.Denominator">Знаменник</option></select></div>
+    </div></div>
+}
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">👨‍🏫 Викладач:</label>
-                        <select class="form-select form-select-sm" @bind="selectedTeacherId">
-                            <option value="0">-- Оберіть викладача --</option>
-                            @if (teachers != null)
-                            {
-                                @foreach (var t in teachers)
-                                {
-                                    <option value="@t.Id">@t.Name</option>
-                                }
-                            }
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">📚 Предмет:</label>
-                        <select class="form-select form-select-sm" @bind="selectedDisciplineId">
-                            <option value="0">-- Оберіть предмет --</option>
-                            @if (disciplines != null)
-                            {
-                                @foreach (var d in disciplines)
-                                {
-                                    <option value="@d.Id">@d.Name</option>
-                                }
-                            }
-                        </select>
-                    </div>
-
-                    <div class="row g-2 mb-3">
-                        <div class="col-7">
-                            <label class="form-label small fw-bold">📅 Дата:</label>
-                            <input type="date" class="form-control form-control-sm" @bind="lessonDate" @bind:format="yyyy-MM-dd" />
-                        </div>
-                        <div class="col-5">
-                            <label class="form-label small fw-bold">⏰ Пара:</label>
-                            <select class="form-select form-select-sm" @bind="lessonPosition">
-                                <option value="1">1 пара</option>
-                                <option value="2">2 пара</option>
-                                <option value="3">3 пара</option>
-                                <option value="4">4 - пара</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <button class="btn btn-primary w-100 fw-bold shadow-sm" @onclick="CreateLesson">
-                        ➕ Внести в розклад
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">📋 Поточний розклад занять</h5>
-                    <span class="badge bg-primary">Усього: @(lessons?.Count ?? 0)</span>
-                </div>
-                <div class="card-body p-0">
-                    @if (lessons == null)
-                    {
-                        <p class="p-3 text-muted">Завантаження даних...</p>
-                    }
-                    else if (!lessons.Any())
-                    {
-                        <p class="p-4 text-center text-muted">📅 Розклад порожній.</p>
-                    }
-                    else
-                    {
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover align-middle mb-0 text-sm">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Дата</th>
-                                        <th>Пара</th>
-                                        <th>Група</th>
-                                        <th>Предмет</th>
-                                        <th>Викладач</th>
-                                        <th class="text-center">Дії</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var item in lessons.OrderByDescending(l => l.LessonDate))
-                                    {
-                                        <tr>
-                                            <td>@item.Id</td>
-                                            <td class="fw-bold text-primary">@item.LessonDate.ToString("dd.MM.yyyy")</td>
-                                            <td><span class="badge bg-secondary"># @item.LessonPosition</span></td>
-                                            <td><strong>@item.Group?.Name</strong></td>
-                                            <td>@item.Discipline?.Name</td>
-                                            <td>@item.Teacher?.Name</td>
-                                            <td class="text-center">
-                                                <button class="btn btn-sm btn-link link-danger" @onclick="() => DeleteLesson(item.Id)">❌</button>
-                                            </td>
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
-                        </div>
-                    }
-                </div>
-            </div>
-        </div>
-
-    </div>
-</div>
+<div class="card shadow-sm"><div class="card-header bg-white d-flex justify-content-between"><strong>Заняття вибраного тижня</strong><span class="badge bg-primary">@lessons.Count</span></div>
+<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Дата</th><th>Пара</th><th>Група</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Стан</th></tr></thead>
+<tbody>@if (lessons.Count == 0) { <tr><td colspan="7" class="text-center text-muted py-4">Занять немає.</td></tr> }
+else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM.yyyy")</td><td>@item.LessonPosition</td><td>@item.Group?.Name</td><td>@item.Discipline?.Name</td><td>@item.Teacher?.Name</td><td>@(item.ClassRoom?.Name ?? "—")</td><td>@GetStatusName(item.Status)</td></tr> } }</tbody></table></div></div>
 
 @code {
-    private List<RealLesson>? lessons;
-    private List<Group>? groups;
-    private List<Teacher>? teachers;
-    private List<Discipline>? disciplines;
+    private List<Semester> semesters = [];
+    private List<RealLessonTransferWeekOption> weeks = [];
+    private List<RealLesson> lessons = [];
+    private int semesterId;
+    private string weekStart = "";
+    private WeekProperty transferProperty = WeekProperty.Numerator;
+    private string errorMessage = "";
+    private string successMessage = "";
+    private RealLessonTransferWeekOption? SelectedWeek => weeks.FirstOrDefault(x => x.WeekStartDate.ToString("yyyy-MM-dd") == weekStart);
 
-    private int selectedGroupId = 0;
-    private int selectedTeacherId = 0;
-    private int selectedDisciplineId = 0;
-    private DateTime lessonDate = DateTime.Today;
-    private int lessonPosition = 1;
-    private string infoMessage = "";
-
-    protected override async Task OnInitializedAsync() => await LoadAllData();
-
-    private async Task LoadAllData()
+    protected override async Task OnInitializedAsync() => semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
+    private async Task LoadWeeks() { weeks = semesterId > 0 ? await Http.GetFromJsonAsync<List<RealLessonTransferWeekOption>>($"api/RealLessons/transfer-week-options/semester/{semesterId}") ?? [] : []; weekStart = ""; lessons = []; }
+    private async Task LoadSchedule() { errorMessage = ""; successMessage = ""; var week = SelectedWeek; if (week is null) { lessons = []; return; } transferProperty = week.RecommendedWeekProperty; lessons = await Http.GetFromJsonAsync<List<RealLesson>>($"api/RealLessons/semester/{semesterId}/week/{week.WeekStartDate:yyyy-MM-dd}") ?? []; }
+    private async Task TransferWeek()
     {
-        try
-        {
-            lessons = await Http.GetFromJsonAsync<List<RealLesson>>("api/reallessons");
-            groups = await Http.GetFromJsonAsync<List<Group>>("api/groups");
-            teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers");
-            disciplines = await Http.GetFromJsonAsync<List<Discipline>>("api/disciplines");
-        }
-        catch (Exception ex) { infoMessage = ex.Message; }
+        var week = SelectedWeek; if (week is null) return;
+        var response = await Http.PostAsJsonAsync("api/RealLessons/transfer-week", new TransferRealLessonWeekRequest { SemesterId = semesterId, WeekStartDate = week.WeekStartDate, WeekProperty = transferProperty });
+        if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; }
+        await LoadWeeks(); weekStart = week.WeekStartDate.ToString("yyyy-MM-dd"); await LoadSchedule(); successMessage = "Тиждень успішно перенесено до реального розкладу.";
     }
-
-    private async Task CreateLesson()
-    {
-        if (selectedGroupId == 0 || selectedTeacherId == 0 || selectedDisciplineId == 0) return;
-        var dayValue = (int)lessonDate.DayOfWeek == 0 ? 7 : (int)lessonDate.DayOfWeek;
-
-        var newLesson = new RealLesson
-        {
-            GroupId = selectedGroupId,
-            TeacherId = selectedTeacherId,
-            DisciplineId = selectedDisciplineId,
-            SemesterId = 1,
-            LessonDate = lessonDate,
-            LessonPosition = lessonPosition,
-            WeekDay = (WeekDay)dayValue,
-            WeekProperty = WeekProperty.EveryWeek,
-            LessonType = LessonType.Lecture
-        };
-
-        var response = await Http.PostAsJsonAsync("api/reallessons", newLesson);
-        if (response.IsSuccessStatusCode) { await LoadAllData(); }
-    }
-
-    private async Task DeleteLesson(int id)
-    {
-        var response = await Http.DeleteAsync($"api/reallessons/{id}");
-        if (response.IsSuccessStatusCode) { await LoadAllData(); }
-    }
+    private static async Task<string> ReadMessage(HttpResponseMessage response) { var text = await response.Content.ReadAsStringAsync(); try { using var json = JsonDocument.Parse(text); if (json.RootElement.TryGetProperty("message", out var value)) return value.GetString() ?? "Операцію не виконано."; } catch (JsonException) { } return text; }
+    private static string GetStatusName(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "Проведено", RealLessonStatus.Cancelled => "Скасовано", _ => "Заплановано" };
 }
