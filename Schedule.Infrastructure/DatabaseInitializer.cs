@@ -28,6 +28,7 @@ public class DatabaseInitializer
 
         CreateTables(connection);
         UpdateExistingTables(connection);
+        DatabaseSeeder.Seed(connection);
     }
 
     private static void CreateTables(
