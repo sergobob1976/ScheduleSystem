@@ -1,31 +1,28 @@
-﻿@page "/"
+@page "/"
 
-<div class="jumbotron bg-white p-5 rounded-3 shadow-sm border">
-    <h1 class="display-4 text-primary">Вітаємо в системі «Розклад АПІ»! 🚀</h1>
-    <p class="lead mt-3">
-        Це автоматизоване робоче місце диспетчера навчального закладу. Система повністю підключена до бази даних MySQL.
-    </p>
-    <hr class="my-4">
-    <p>Використовуйте бічне ліве меню для керування системою:</p>
+<div class="p-4 p-lg-5 bg-white rounded-3 shadow-sm border mb-4">
+    <div class="text-uppercase small text-primary fw-bold mb-2">Робоче місце диспетчера</div>
+    <h1 class="display-5 fw-bold">ScheduleSystem</h1>
+    <p class="lead text-muted mb-0">Створюйте двотижневий базовий шаблон, контролюйте навчальні години та переносіть календарні тижні до реального розкладу.</p>
+</div>
 
-    <div class="row mt-4">
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 border-start border-primary border-4">
-                <div class="card-body">
-                    <h5>📅 Розклад занять</h5>
-                    <p class="text-muted small">Швидке додавання пар, вибір дат та перегляд поточного розкладу.</p>
-                    <a href="schedule" class="btn btn-sm btn-outline-primary">Перейти</a>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4 mb-3">
-            <div class="card h-100 border-start border-success border-4">
-                <div class="card-body">
-                    <h5>🎒 Довідники даних</h5>
-                    <p class="text-muted small">Керування списками академічних груп, викладацьким складом та предметами.</p>
-                    <a href="groups" class="btn btn-sm btn-outline-success">До груп</a>
-                </div>
-            </div>
-        </div>
-    </div>
+<div class="row g-4">
+    <div class="col-lg-6"><div class="card h-100 shadow-sm border-primary"><div class="card-body p-4">
+        <span class="badge bg-primary mb-3">Крок 1</span><h2 class="h4">Базовий розклад</h2>
+        <p class="text-muted">Чисельник, знаменник, щотижневі заняття, конфлікти та контроль годин по групах і викладачах.</p>
+        <a href="base-schedule" class="btn btn-primary">Відкрити конструктор</a>
+    </div></div></div>
+    <div class="col-lg-6"><div class="card h-100 shadow-sm border-success"><div class="card-body p-4">
+        <span class="badge bg-success mb-3">Крок 2</span><h2 class="h4">Реальний розклад</h2>
+        <p class="text-muted">Перенесення цілого тижня, незалежне редагування, стани занять і звіти фактичної вичитки.</p>
+        <a href="schedule" class="btn btn-success">Керувати розкладом</a>
+    </div></div></div>
+    <div class="col-lg-6"><div class="card h-100 shadow-sm"><div class="card-body p-4">
+        <h2 class="h5">Навчальне навантаження</h2><p class="text-muted">Плани груп, навантаження викладачів і призначення на дисципліни.</p>
+        <a href="workload-overview" class="btn btn-outline-primary">Переглянути контроль</a>
+    </div></div></div>
+    <div class="col-lg-6"><div class="card h-100 shadow-sm"><div class="card-body p-4">
+        <h2 class="h5">Довідники</h2><p class="text-muted">Семестри, групи, спеціальності, дисципліни, викладачі та аудиторії.</p>
+        <a href="semesters" class="btn btn-outline-secondary">Перейти до довідників</a>
+    </div></div></div>
 </div>
