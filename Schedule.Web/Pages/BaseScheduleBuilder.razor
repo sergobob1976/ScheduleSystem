@@ -50,9 +50,9 @@ else if (data is not null)
         <div class="card-header bg-white d-flex justify-content-between align-items-center">
             <div class="btn-group" role="group" aria-label="Тип тижня">
                 <button class="btn @(selectedWeek == WeekProperty.Numerator ? "btn-primary" : "btn-outline-primary")"
-                        @onclick="() => selectedWeek = WeekProperty.Numerator">Чисельник</button>
+                        @onclick="() => SelectWeek(WeekProperty.Numerator)">Чисельник</button>
                 <button class="btn @(selectedWeek == WeekProperty.Denominator ? "btn-primary" : "btn-outline-primary")"
-                        @onclick="() => selectedWeek = WeekProperty.Denominator">Знаменник</button>
+                        @onclick="() => SelectWeek(WeekProperty.Denominator)">Знаменник</button>
             </div>
             <span class="text-muted small">Заняття «кожний тиждень» показані в обох вкладках</span>
         </div>
@@ -188,6 +188,14 @@ else if (data is not null)
     private void OpenEditor(WeekDay day, int position) { editingLessonId = 0; editorDay = day; editorPosition = position; editorWeekProperty = selectedWeek; assignmentId = 0; classRoomId = 0; showEditor = true; errorMessage = ""; }
     private void OpenEdit(BaseLesson lesson) { editingLessonId = lesson.Id; editorDay = lesson.WeekDay; editorPosition = lesson.LessonPosition; editorWeekProperty = lesson.WeekProperty; assignmentId = lesson.TeachingAssignmentId ?? 0; classRoomId = lesson.ClassRoomId ?? 0; showEditor = true; errorMessage = ""; }
     private void CloseEditor() { showEditor = false; editingLessonId = 0; }
+    private void SelectWeek(WeekProperty weekProperty)
+    {
+        if (selectedWeek == weekProperty) return;
+        selectedWeek = weekProperty;
+        CloseEditor();
+        errorMessage = "";
+        successMessage = "";
+    }
 
     private async Task SaveLesson()
     {
