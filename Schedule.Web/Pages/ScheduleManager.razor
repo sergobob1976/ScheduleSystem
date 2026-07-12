@@ -41,7 +41,7 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
         <div class="col-md-3"><label class="form-label fw-bold">Аудиторія</label><select class="form-select" @bind="editingLesson.ClassRoomId"><option value="">Без аудиторії</option>@foreach(var room in classRooms){<option value="@room.Id">@room.Name</option>}</select></div>
         <div class="col-md-6"><label class="form-label fw-bold">Посилання на конференцію</label><input class="form-control" type="url" placeholder="https://..." @bind="editingLesson.ConferenceLink" /></div>
         <div class="col-md-6"><label class="form-label fw-bold">Посилання на матеріали</label><input class="form-control" type="url" placeholder="https://..." @bind="editingLesson.ResourceLink" /></div>
-        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" @onclick="SaveLesson">Зберегти</button><button class="btn btn-outline-secondary" @onclick="() => editingLesson = null">Скасувати</button></div>
+        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" disabled="@isSavingLesson" @onclick="SaveLesson">@(isSavingLesson ? "Збереження…" : "Зберегти")</button><button class="btn btn-outline-secondary" disabled="@isSavingLesson" @onclick="() => editingLesson = null">Скасувати</button></div>
     </div></div></div>
 }
 
@@ -94,6 +94,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private int semesterId;
     private int scheduleGroupId;
     private bool isTransferring;
+    private bool isSavingLesson;
     private string weekStart = "";
     private WeekProperty transferProperty = WeekProperty.Numerator;
     private string errorMessage = "";
@@ -159,7 +160,30 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         lesson.Status = status; errorMessage = ""; await RefreshLoadedReports(); successMessage = $"Стан заняття змінено на «{GetStatusName(status)}».";
     }
     private void EditLesson(RealLesson source) => editingLesson = new RealLesson { Id=source.Id, TeachingAssignmentId=source.TeachingAssignmentId, GroupId=source.GroupId, TeacherId=source.TeacherId, DisciplineId=source.DisciplineId, ClassRoomId=source.ClassRoomId, SemesterId=source.SemesterId, LessonDate=source.LessonDate, LessonPosition=source.LessonPosition, WeekDay=source.WeekDay, WeekProperty=source.WeekProperty, LessonType=source.LessonType, Status=source.Status, ConferenceLink=source.ConferenceLink, ResourceLink=source.ResourceLink };
-    private async Task SaveLesson() { if (editingLesson is null) return; var response = await Http.PutAsJsonAsync($"api/RealLessons/{editingLesson.Id}", editingLesson); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } editingLesson = null; await LoadSchedule(); await RefreshLoadedReports(); successMessage = "Реальне заняття успішно оновлено."; }
+    private async Task SaveLesson()
+    {
+        if (editingLesson is null) return;
+        isSavingLesson = true;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/RealLessons/{editingLesson.Id}", editingLesson);
+            if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; }
+            editingLesson = null;
+            await LoadSchedule();
+            await RefreshLoadedReports();
+            successMessage = "Реальне заняття успішно оновлено.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося зберегти заняття. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            isSavingLesson = false;
+        }
+    }
     private async Task DeleteLesson(int id) { if (!await JS.InvokeAsync<bool>("confirm", "Видалити це заняття з реального розкладу?")) return; errorMessage = ""; successMessage = ""; var response = await Http.DeleteAsync($"api/RealLessons/{id}"); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } if (editingLesson?.Id == id) editingLesson = null; await LoadSchedule(); await RefreshLoadedReports(); successMessage = "Реальне заняття успішно видалено."; }
     private async Task LoadHoursReport() { if (semesterId <= 0 || reportGroupId <= 0) { errorMessage = "Оберіть семестр і групу для звіту."; return; } errorMessage = ""; hoursReport = await Http.GetFromJsonAsync<RealLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/group/{reportGroupId}/hours?reportDate={reportDate:yyyy-MM-dd}"); }
     private async Task LoadTeacherHoursReport() { if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача для звіту."; return; } errorMessage = ""; teacherHoursReport = await Http.GetFromJsonAsync<TeacherLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/teacher/{reportTeacherId}/hours?reportDate={teacherReportDate:yyyy-MM-dd}"); }
