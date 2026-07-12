@@ -19,12 +19,13 @@
             <select class="form-select" @bind="groupId" @bind:after="ChangeGroup"><option value="0">Оберіть групу</option>
                 @foreach (var item in groups) { <option value="@item.Id">@item.Name</option> }
             </select></div>
-        <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="LoadBuilder" disabled="@isLoading">Показати</button></div>
+        <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="LoadBuilder" disabled="@isLoading">@(isLoading ? "Завантаження…" : "Показати")</button></div>
     </div>
 </div></div>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
 else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-success">@successMessage</div> }
+else if (isLoading) { <div class="alert alert-info">Завантаження базового розкладу…</div> }
 else if (data is not null)
 {
     @if (showEditor)
@@ -251,7 +252,14 @@ else if (data is not null)
     private async Task LoadBuilder()
     {
         if (semesterId <= 0 || groupId <= 0) { errorMessage = "Оберіть семестр і групу."; return; }
-        isLoading = true; errorMessage = ""; successMessage = "";
+        isLoading = true;
+        errorMessage = "";
+        successMessage = "";
+        data = null;
+        projection = null;
+        baseLessons = [];
+        showEditor = false;
+        editingLessonId = 0;
         try
         {
             var dataTask = Http.GetFromJsonAsync<BaseScheduleBuilderResponse>($"api/BaseScheduleBuilder/semester/{semesterId}/group/{groupId}");
@@ -262,7 +270,7 @@ else if (data is not null)
             projection = projectionTask.Result;
             baseLessons = (lessonsTask.Result ?? []).Where(x => x.SemesterId == semesterId).ToList();
         }
-        catch (Exception ex) { errorMessage = $"Не вдалося завантажити базовий розклад: {ex.Message}"; }
+        catch (Exception) { errorMessage = "Не вдалося завантажити базовий розклад. Перевірте з’єднання із сервером і повторіть спробу."; }
         finally { isLoading = false; }
     }
 
