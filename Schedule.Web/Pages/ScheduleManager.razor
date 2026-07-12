@@ -28,6 +28,7 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
     <div class="card shadow-sm mb-4"><div class="card-body d-flex flex-wrap gap-4 align-items-center">
         <div><div class="small text-muted">Рекомендований тип</div><strong>@SelectedWeek.RecommendedWeekPropertyName</strong></div>
         <div><div class="small text-muted">Фактично перенесено</div><strong>@(SelectedWeek.TransferredWeekPropertyName ?? "Ще не перенесено")</strong></div>
+        <div><div class="small text-muted">Створено занять</div><strong>@(SelectedWeek.IsTransferred ? SelectedWeek.TransferredLessonCount.ToString() : "—")</strong></div>
         <div><label class="form-label small fw-bold mb-1">Тип для перенесення</label><select class="form-select form-select-sm" @bind="transferProperty"><option value="@WeekProperty.Numerator">Чисельник</option><option value="@WeekProperty.Denominator">Знаменник</option></select></div>
     </div></div>
 }
