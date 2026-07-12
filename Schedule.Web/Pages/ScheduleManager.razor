@@ -30,6 +30,7 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
         <div><div class="small text-muted">Фактично перенесено</div><strong>@(SelectedWeek.TransferredWeekPropertyName ?? "Ще не перенесено")</strong></div>
         <div><div class="small text-muted">Створено занять</div><strong>@(SelectedWeek.IsTransferred ? SelectedWeek.TransferredLessonCount.ToString() : "—")</strong></div>
         <div><label class="form-label small fw-bold mb-1">Тип для перенесення</label><select class="form-select form-select-sm" disabled="@(SelectedWeek.IsTransferred || isTransferring)" @bind="transferProperty"><option value="@WeekProperty.Numerator">Чисельник</option><option value="@WeekProperty.Denominator">Знаменник</option></select></div>
+        <div class="ms-auto"><button class="btn btn-outline-primary" disabled="@(!SelectedWeek.IsTransferred || isLoadingSchedule || isSavingLesson)" @onclick="OpenNewLesson">Додати заняття</button></div>
         @if (!SelectedWeek.IsTransferred && transferProperty != SelectedWeek.RecommendedWeekProperty)
         {
             <div class="alert alert-warning py-2 px-3 mb-0">Обрано тип тижня, відмінний від рекомендованого. Перенесення буде виконано за вибором диспетчера.</div>
@@ -39,14 +40,14 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
 
 @if (editingLesson is not null)
 {
-    <div class="card border-primary shadow-sm mb-4"><div class="card-header bg-primary text-white">Редагування реального заняття</div><div class="card-body"><div class="row g-3 align-items-end">
+    <div class="card border-primary shadow-sm mb-4"><div class="card-header bg-primary text-white">@(isCreatingLesson ? "Нове реальне заняття" : "Редагування реального заняття")</div><div class="card-body"><div class="row g-3 align-items-end">
         <div class="col-md-3"><label class="form-label fw-bold">Дата</label><input type="date" class="form-control" @bind="editingLesson.LessonDate" @bind:format="yyyy-MM-dd" /></div>
         <div class="col-md-2"><label class="form-label fw-bold">Пара</label><select class="form-select" @bind="editingLesson.LessonPosition">@for (var i=1;i<=8;i++){<option value="@i">@i</option>}</select></div>
-        <div class="col-md-4"><label class="form-label fw-bold">Призначення</label><select class="form-select" @bind="editingLesson.TeachingAssignmentId">@foreach(var item in AvailableAssignments){<option value="@item.Id">@item.GroupDiscipline?.Group?.Name · @item.GroupDiscipline?.Discipline?.Name · @item.Teacher?.Name · @GetLessonTypeName(item.LessonType)</option>}</select></div>
+        <div class="col-md-4"><label class="form-label fw-bold">Призначення</label><select class="form-select" @bind="editingLesson.TeachingAssignmentId"><option value="">Оберіть призначення</option>@foreach(var item in AvailableAssignments){<option value="@item.Id">@item.GroupDiscipline?.Group?.Name · @item.GroupDiscipline?.Discipline?.Name · @item.Teacher?.Name · @GetLessonTypeName(item.LessonType)</option>}</select></div>
         <div class="col-md-3"><label class="form-label fw-bold">Аудиторія</label><select class="form-select" @bind="editingLesson.ClassRoomId"><option value="">Без аудиторії</option>@foreach(var room in classRooms){<option value="@room.Id">@room.Name</option>}</select></div>
         <div class="col-md-6"><label class="form-label fw-bold">Посилання на конференцію</label><input class="form-control" type="url" placeholder="https://..." @bind="editingLesson.ConferenceLink" /></div>
         <div class="col-md-6"><label class="form-label fw-bold">Посилання на матеріали</label><input class="form-control" type="url" placeholder="https://..." @bind="editingLesson.ResourceLink" /></div>
-        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" disabled="@isSavingLesson" @onclick="SaveLesson">@(isSavingLesson ? "Збереження…" : "Зберегти")</button><button class="btn btn-outline-secondary" disabled="@isSavingLesson" @onclick="() => editingLesson = null">Скасувати</button></div>
+        <div class="col-12 d-flex gap-2"><button class="btn btn-primary" disabled="@isSavingLesson" @onclick="SaveLesson">@(isSavingLesson ? "Збереження…" : isCreatingLesson ? "Створити заняття" : "Зберегти")</button><button class="btn btn-outline-secondary" disabled="@isSavingLesson" @onclick="CloseLessonEditor">Скасувати</button></div>
     </div></div></div>
 }
 
@@ -106,6 +107,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private bool isLoadingSchedule;
     private bool isLoadingGroupReport;
     private bool isLoadingTeacherReport;
+    private bool isCreatingLesson;
     private string weekStart = "";
     private WeekProperty transferProperty = WeekProperty.Numerator;
     private string errorMessage = "";
@@ -139,6 +141,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         hoursReport = null;
         teacherHoursReport = null;
         editingLesson = null;
+        isCreatingLesson = false;
         errorMessage = "";
         successMessage = "";
         await LoadWeeks();
@@ -149,6 +152,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         errorMessage = "";
         successMessage = "";
         lessons = [];
+        CloseLessonEditor();
         var week = SelectedWeek;
         if (week is null) return;
         transferProperty = week.RecommendedWeekProperty;
@@ -231,7 +235,35 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
             isChangingStatus = false;
         }
     }
-    private void EditLesson(RealLesson source) => editingLesson = new RealLesson { Id=source.Id, TeachingAssignmentId=source.TeachingAssignmentId, GroupId=source.GroupId, TeacherId=source.TeacherId, DisciplineId=source.DisciplineId, ClassRoomId=source.ClassRoomId, SemesterId=source.SemesterId, LessonDate=source.LessonDate, LessonPosition=source.LessonPosition, WeekDay=source.WeekDay, WeekProperty=source.WeekProperty, LessonType=source.LessonType, Status=source.Status, ConferenceLink=source.ConferenceLink, ResourceLink=source.ResourceLink };
+    private void OpenNewLesson()
+    {
+        var week = SelectedWeek;
+        if (week is null || !week.IsTransferred) return;
+        isCreatingLesson = true;
+        editingLesson = new RealLesson
+        {
+            LessonDate = week.ActiveStartDate,
+            LessonPosition = 1,
+            WeekDay = ConvertToWeekDay(week.ActiveStartDate),
+            WeekProperty = week.TransferredWeekProperty ?? week.RecommendedWeekProperty,
+            LessonType = LessonType.Lecture,
+            Status = RealLessonStatus.Planned
+        };
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private void EditLesson(RealLesson source)
+    {
+        isCreatingLesson = false;
+        editingLesson = new RealLesson { Id=source.Id, TeachingAssignmentId=source.TeachingAssignmentId, GroupId=source.GroupId, TeacherId=source.TeacherId, DisciplineId=source.DisciplineId, ClassRoomId=source.ClassRoomId, SemesterId=source.SemesterId, LessonDate=source.LessonDate, LessonPosition=source.LessonPosition, WeekDay=source.WeekDay, WeekProperty=source.WeekProperty, LessonType=source.LessonType, Status=source.Status, ConferenceLink=source.ConferenceLink, ResourceLink=source.ResourceLink };
+    }
+
+    private void CloseLessonEditor()
+    {
+        editingLesson = null;
+        isCreatingLesson = false;
+    }
     private async Task SaveLesson()
     {
         if (editingLesson is null) return;
@@ -240,12 +272,15 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         successMessage = "";
         try
         {
-            var response = await Http.PutAsJsonAsync($"api/RealLessons/{editingLesson.Id}", editingLesson);
+            var response = isCreatingLesson
+                ? await Http.PostAsJsonAsync("api/RealLessons", editingLesson)
+                : await Http.PutAsJsonAsync($"api/RealLessons/{editingLesson.Id}", editingLesson);
             if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; }
-            editingLesson = null;
+            var created = isCreatingLesson;
+            CloseLessonEditor();
             await LoadSchedule();
             await RefreshLoadedReports();
-            successMessage = "Реальне заняття успішно оновлено.";
+            successMessage = created ? "Реальне заняття успішно створено." : "Реальне заняття успішно оновлено.";
         }
         catch (HttpRequestException)
         {
@@ -349,5 +384,16 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         WeekDay.Wednesday => "Середа", WeekDay.Thursday => "Четвер",
         WeekDay.Friday => "П’ятниця", WeekDay.Saturday => "Субота",
         WeekDay.Sunday => "Неділя", _ => "—"
+    };
+    private static WeekDay ConvertToWeekDay(DateTime date) => date.DayOfWeek switch
+    {
+        DayOfWeek.Monday => WeekDay.Monday,
+        DayOfWeek.Tuesday => WeekDay.Tuesday,
+        DayOfWeek.Wednesday => WeekDay.Wednesday,
+        DayOfWeek.Thursday => WeekDay.Thursday,
+        DayOfWeek.Friday => WeekDay.Friday,
+        DayOfWeek.Saturday => WeekDay.Saturday,
+        DayOfWeek.Sunday => WeekDay.Sunday,
+        _ => WeekDay.Monday
     };
 }
