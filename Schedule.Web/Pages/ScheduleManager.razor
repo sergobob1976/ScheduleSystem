@@ -120,6 +120,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; }
         var result = await response.Content.ReadFromJsonAsync<TransferRealLessonWeekResponse>();
         await LoadWeeks(); weekStart = week.WeekStartDate.ToString("yyyy-MM-dd"); await LoadSchedule();
+        await RefreshLoadedReports();
         successMessage = result is null
             ? "Тиждень успішно перенесено до реального розкладу."
             : $"Тиждень успішно перенесено. Створено занять: {result.CreatedLessonCount}.";
@@ -130,13 +131,18 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         var status = (RealLessonStatus)value;
         var response = await Http.PatchAsJsonAsync($"api/RealLessons/{lesson.Id}/status", new UpdateRealLessonStatusRequest { Status = status });
         if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); await LoadSchedule(); return; }
-        lesson.Status = status; errorMessage = ""; successMessage = $"Стан заняття змінено на «{GetStatusName(status)}».";
+        lesson.Status = status; errorMessage = ""; await RefreshLoadedReports(); successMessage = $"Стан заняття змінено на «{GetStatusName(status)}».";
     }
     private void EditLesson(RealLesson source) => editingLesson = new RealLesson { Id=source.Id, TeachingAssignmentId=source.TeachingAssignmentId, GroupId=source.GroupId, TeacherId=source.TeacherId, DisciplineId=source.DisciplineId, ClassRoomId=source.ClassRoomId, SemesterId=source.SemesterId, LessonDate=source.LessonDate, LessonPosition=source.LessonPosition, WeekDay=source.WeekDay, WeekProperty=source.WeekProperty, LessonType=source.LessonType, Status=source.Status, ConferenceLink=source.ConferenceLink, ResourceLink=source.ResourceLink };
-    private async Task SaveLesson() { if (editingLesson is null) return; var response = await Http.PutAsJsonAsync($"api/RealLessons/{editingLesson.Id}", editingLesson); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } editingLesson = null; await LoadSchedule(); successMessage = "Реальне заняття успішно оновлено."; }
-    private async Task DeleteLesson(int id) { if (!await JS.InvokeAsync<bool>("confirm", "Видалити це заняття з реального розкладу?")) return; errorMessage = ""; successMessage = ""; var response = await Http.DeleteAsync($"api/RealLessons/{id}"); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } if (editingLesson?.Id == id) editingLesson = null; await LoadSchedule(); successMessage = "Реальне заняття успішно видалено."; if (hoursReport is not null) await LoadHoursReport(); }
+    private async Task SaveLesson() { if (editingLesson is null) return; var response = await Http.PutAsJsonAsync($"api/RealLessons/{editingLesson.Id}", editingLesson); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } editingLesson = null; await LoadSchedule(); await RefreshLoadedReports(); successMessage = "Реальне заняття успішно оновлено."; }
+    private async Task DeleteLesson(int id) { if (!await JS.InvokeAsync<bool>("confirm", "Видалити це заняття з реального розкладу?")) return; errorMessage = ""; successMessage = ""; var response = await Http.DeleteAsync($"api/RealLessons/{id}"); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } if (editingLesson?.Id == id) editingLesson = null; await LoadSchedule(); await RefreshLoadedReports(); successMessage = "Реальне заняття успішно видалено."; }
     private async Task LoadHoursReport() { if (semesterId <= 0 || reportGroupId <= 0) { errorMessage = "Оберіть семестр і групу для звіту."; return; } errorMessage = ""; hoursReport = await Http.GetFromJsonAsync<RealLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/group/{reportGroupId}/hours?reportDate={reportDate:yyyy-MM-dd}"); }
     private async Task LoadTeacherHoursReport() { if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача для звіту."; return; } errorMessage = ""; teacherHoursReport = await Http.GetFromJsonAsync<TeacherLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/teacher/{reportTeacherId}/hours?reportDate={teacherReportDate:yyyy-MM-dd}"); }
+    private async Task RefreshLoadedReports()
+    {
+        if (hoursReport is not null) await LoadHoursReport();
+        if (teacherHoursReport is not null) await LoadTeacherHoursReport();
+    }
     private static async Task<string> ReadMessage(HttpResponseMessage response) { var text = await response.Content.ReadAsStringAsync(); try { using var json = JsonDocument.Parse(text); if (json.RootElement.TryGetProperty("message", out var value)) return value.GetString() ?? "Операцію не виконано."; } catch (JsonException) { } return text; }
     private static string GetStatusName(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "Проведено", RealLessonStatus.Cancelled => "Скасовано", _ => "Заплановано" };
     private static string GetStatusClass(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "border-success text-success", RealLessonStatus.Cancelled => "border-danger text-danger", _ => "border-secondary" };
