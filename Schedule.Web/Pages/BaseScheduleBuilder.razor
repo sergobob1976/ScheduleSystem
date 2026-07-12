@@ -76,8 +76,8 @@ else if (data is not null)
                                         @if (lesson.ClassRoom is not null) { <span class="badge bg-light text-dark border">@lesson.ClassRoom.Name</span> }
                                         @if (lesson.WeekProperty == WeekProperty.EveryWeek) { <span class="badge bg-info text-dark ms-1">Щотижня</span> }
                                         <div class="mt-2 d-flex gap-1">
-                                            <button class="btn btn-sm btn-outline-primary" @onclick="() => OpenEdit(lesson)">Редагувати</button>
-                                            <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLesson(lesson.Id)">Видалити</button>
+                                            <button class="btn btn-sm btn-outline-primary" disabled="@(deletingLessonId > 0)" @onclick="() => OpenEdit(lesson)">Редагувати</button>
+                                            <button class="btn btn-sm btn-outline-danger" disabled="@(deletingLessonId > 0)" @onclick="() => DeleteLesson(lesson.Id)">@(deletingLessonId == lesson.Id ? "Видалення…" : "Видалити")</button>
                                         </div>
                                     }
                                     else { <button class="btn btn-sm btn-outline-secondary w-100 h-100 border-0" @onclick="() => OpenEditor(day, currentPosition)">＋ Додати</button> }
@@ -138,6 +138,7 @@ else if (data is not null)
     private int groupId;
     private bool isLoading;
     private bool isSaving;
+    private int deletingLessonId;
     private string errorMessage = "";
     private string successMessage = "";
     private bool showEditor;
@@ -217,13 +218,26 @@ else if (data is not null)
     private async Task DeleteLesson(int id)
     {
         if (!await JS.InvokeAsync<bool>("confirm", "Видалити це заняття з базового розкладу?")) return;
+        deletingLessonId = id;
         errorMessage = "";
-        var response = await Http.DeleteAsync($"api/BaseLessons/{id}");
-        if (!response.IsSuccessStatusCode) { errorMessage = await ReadApiMessage(response); return; }
-        if (editingLessonId == id) CloseEditor();
-        await LoadBuilder();
-        await RefreshTeacherReport();
-        successMessage = "Заняття успішно видалено.";
+        successMessage = "";
+        try
+        {
+            var response = await Http.DeleteAsync($"api/BaseLessons/{id}");
+            if (!response.IsSuccessStatusCode) { errorMessage = await ReadApiMessage(response); return; }
+            if (editingLessonId == id) CloseEditor();
+            await LoadBuilder();
+            await RefreshTeacherReport();
+            successMessage = "Заняття успішно видалено.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося видалити заняття. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            deletingLessonId = 0;
+        }
     }
 
     private static async Task<string> ReadApiMessage(HttpResponseMessage response)
