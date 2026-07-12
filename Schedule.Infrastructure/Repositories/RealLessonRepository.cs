@@ -161,6 +161,34 @@ public class RealLessonRepository : IRealLessonRepository
     }
 
     public async Task<IEnumerable<RealLesson>>
+        GetByTeacherAndDateRangeAsync(
+            int teacherId,
+            int semesterId,
+            DateTime startDate,
+            DateTime endDate)
+    {
+        using var connection = CreateConnection();
+        string sql = $"""
+            {BaseJoinSql}
+            WHERE rl.TeacherId = @TeacherId
+                AND rl.SemesterId = @SemesterId
+                AND rl.LessonDate >= @StartDate
+                AND rl.LessonDate <= @EndDate
+            ORDER BY
+                rl.LessonDate,
+                rl.LessonPosition,
+                g.Name;
+            """;
+        return await QueryAsync(connection, sql, new
+        {
+            TeacherId = teacherId,
+            SemesterId = semesterId,
+            StartDate = startDate.Date,
+            EndDate = endDate.Date
+        });
+    }
+
+    public async Task<IEnumerable<RealLesson>>
         GetBySemesterAndDateRangeAsync(
             int semesterId,
             DateTime startDate,

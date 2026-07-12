@@ -21,6 +21,12 @@ public interface IRealLessonRepository
     Task<IEnumerable<RealLesson>> GetByTeacherAndDateAsync(
         int teacherId, DateTime date);
 
+    Task<IEnumerable<RealLesson>> GetByTeacherAndDateRangeAsync(
+        int teacherId,
+        int semesterId,
+        DateTime startDate,
+        DateTime endDate);
+
     Task<IEnumerable<RealLesson>>
         GetBySemesterAndDateRangeAsync(
             int semesterId,

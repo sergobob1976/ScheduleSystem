@@ -9,7 +9,7 @@
 
 <div class="card shadow-sm mb-4"><div class="card-body"><div class="row g-3 align-items-end">
     <div class="col-md-5"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="ChangeSemester"><option value="0">Оберіть семестр</option>@foreach(var item in semesters){<option value="@item.Id">@item.Name</option>}</select></div>
-    <div class="col-md-4"><label class="form-label fw-bold">Дата</label><input type="date" class="form-control" min="@MinDate" max="@MaxDate" @bind="scheduleDate" @bind:format="yyyy-MM-dd" @bind:after="ClearReport" /></div>
+    <div class="col-md-4"><label class="form-label fw-bold">Дата</label><input type="date" class="form-control" @bind="scheduleDate" @bind:format="yyyy-MM-dd" @bind:after="ClearReport" /></div>
     <div class="col-md-3"><button class="btn btn-primary w-100" disabled="@isLoading" @onclick="LoadReport">@(isLoading ? "Завантаження…" : "Показати")</button></div>
 </div></div></div>
 
@@ -54,8 +54,6 @@
     private bool isLoading;
     private string errorMessage = "";
     private Semester? SelectedSemester => semesters.FirstOrDefault(x => x.Id == semesterId);
-    private string MinDate => SelectedSemester?.StartDate.ToString("yyyy-MM-dd") ?? "";
-    private string MaxDate => SelectedSemester?.EndDate.ToString("yyyy-MM-dd") ?? "";
     private string DownloadUrl => new Uri(Http.BaseAddress!, $"api/DayScheduleReports/semester/{semesterId}/docx?scheduleDate={scheduleDate:yyyy-MM-dd}").ToString();
 
     protected override async Task OnInitializedAsync()
@@ -84,11 +82,7 @@
 
     private void SetDefaultDate()
     {
-        var semester = SelectedSemester;
-        if (semester is null) return;
-        scheduleDate = DateTime.Today < semester.StartDate.Date ? semester.StartDate.Date
-            : DateTime.Today > semester.EndDate.Date ? semester.EndDate.Date
-            : DateTime.Today;
+        scheduleDate = DateTime.Today;
     }
 
     private void ChangeSemester() { SetDefaultDate(); ClearReport(); }

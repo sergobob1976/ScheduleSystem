@@ -1,0 +1,123 @@
+@page "/reports/teacher-reading"
+@using Schedule.Core.DTOs
+@using Schedule.Core.Enums
+@using Schedule.Core.Models
+@inject HttpClient Http
+
+<h1 class="h3 mb-3">Вичитка викладача</h1>
+<p class="text-muted">Проведені заняття викладача за вибраний період для заповнення навчальних журналів.</p>
+
+<div class="card shadow-sm mb-4"><div class="card-body"><div class="row g-3 align-items-end">
+    <div class="col-md-3"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="ChangeSemester"><option value="0">Оберіть семестр</option>@foreach(var item in semesters){<option value="@item.Id">@item.Name</option>}</select></div>
+    <div class="col-md-3"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="teacherId" @bind:after="ClearReport"><option value="0">Оберіть викладача</option>@foreach(var item in AvailableTeachers){<option value="@item.Id">@item.Name</option>}</select></div>
+    <div class="col-md-2"><label class="form-label fw-bold">Початок</label><input type="date" class="form-control" min="@SemesterStart" max="@SemesterEnd" @bind="periodStart" @bind:format="yyyy-MM-dd" @bind:after="ClearReport" /></div>
+    <div class="col-md-2"><label class="form-label fw-bold">Завершення</label><input type="date" class="form-control" min="@SemesterStart" max="@SemesterEnd" @bind="periodEnd" @bind:format="yyyy-MM-dd" @bind:after="ClearReport" /></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" disabled="@isLoading" @onclick="LoadReport">@(isLoading ? "Завантаження…" : "Показати")</button></div>
+</div></div></div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
+
+@if (report is not null)
+{
+    <div class="card shadow-sm mb-4"><div class="card-body"><div class="row text-center g-3">
+        <div class="col-md-4"><div class="text-muted small">Викладач</div><strong>@report.TeacherName</strong></div>
+        <div class="col-md-4"><div class="text-muted small">Проведено пар</div><strong>@report.TotalLessons</strong></div>
+        <div class="col-md-4"><div class="text-muted small">Академічних годин</div><strong>@report.TotalAcademicHours</strong></div>
+    </div></div></div>
+
+    @if (report.Days.Count == 0)
+    {
+        <div class="alert alert-info">За вибраний період проведених занять немає.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm"><div class="table-responsive"><table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="table-light"><tr><th>Дата</th><th>Пара</th><th>Група</th><th>Дисципліна</th><th>Тип заняття</th><th>Аудиторія</th><th>Академічних годин</th></tr></thead><tbody>
+            @foreach (var day in report.Days)
+            {
+                var first = true;
+                @foreach (var lesson in day.Lessons)
+                {
+                    <tr>
+                        @if (first) { <th rowspan="@day.Lessons.Count" class="table-primary">@day.LessonDate.ToString("dd.MM.yyyy")<div class="small fw-normal">@day.DayName</div></th> first = false; }
+                        <td class="text-center fw-bold">@lesson.LessonPosition</td><td>@lesson.GroupName</td><td>@lesson.DisciplineName</td><td>@GetLessonTypeName(lesson.LessonType)</td><td>@(lesson.ClassRoomName ?? "—")</td><td class="text-center">@report.AcademicHoursPerLesson</td>
+                    </tr>
+                }
+            }
+            </tbody><tfoot class="table-light fw-bold"><tr><td colspan="6">Усього</td><td class="text-center">@report.TotalAcademicHours</td></tr></tfoot>
+        </table></div></div>
+    }
+}
+
+@code {
+    private List<Semester> semesters = [];
+    private List<Teacher> teachers = [];
+    private List<TeacherSemesterLoad> teacherSemesterLoads = [];
+    private int semesterId;
+    private int teacherId;
+    private DateTime periodStart;
+    private DateTime periodEnd;
+    private TeacherReadingReportResponse? report;
+    private bool isLoading;
+    private string errorMessage = "";
+    private Semester? SelectedSemester => semesters.FirstOrDefault(x => x.Id == semesterId);
+    private IEnumerable<Teacher> AvailableTeachers => teachers.Where(teacher => teacherSemesterLoads.Any(load => load.SemesterId == semesterId && load.TeacherId == teacher.Id));
+    private string SemesterStart => SelectedSemester?.StartDate.ToString("yyyy-MM-dd") ?? "";
+    private string SemesterEnd => SelectedSemester?.EndDate.ToString("yyyy-MM-dd") ?? "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
+            teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
+            teacherSemesterLoads = await Http.GetFromJsonAsync<List<TeacherSemesterLoad>>("api/teachersemesterloads") ?? [];
+            SelectDefaultSemester();
+            SetDefaultPeriod();
+        }
+        catch (Exception)
+        {
+            errorMessage = "Не вдалося завантажити дані для звіту. Перевірте з’єднання із сервером і оновіть сторінку.";
+        }
+    }
+
+    private void SelectDefaultSemester()
+    {
+        var today = DateTime.Today;
+        var semester = semesters.FirstOrDefault(x => x.StartDate.Date <= today && x.EndDate.Date >= today)
+            ?? semesters.Where(x => x.StartDate.Date > today).OrderBy(x => x.StartDate).FirstOrDefault()
+            ?? semesters.OrderByDescending(x => x.EndDate).FirstOrDefault();
+        semesterId = semester?.Id ?? 0;
+    }
+
+    private void SetDefaultPeriod()
+    {
+        var semester = SelectedSemester;
+        if (semester is null) return;
+        periodStart = semester.StartDate.Date;
+        periodEnd = DateTime.Today < semester.StartDate.Date ? semester.StartDate.Date
+            : DateTime.Today > semester.EndDate.Date ? semester.EndDate.Date
+            : DateTime.Today;
+    }
+
+    private void ChangeSemester() { teacherId = 0; SetDefaultPeriod(); ClearReport(); }
+    private void ClearReport() { report = null; errorMessage = ""; }
+
+    private async Task LoadReport()
+    {
+        if (semesterId <= 0 || teacherId <= 0) { errorMessage = "Оберіть семестр і викладача."; return; }
+        isLoading = true; errorMessage = ""; report = null;
+        try
+        {
+            report = await Http.GetFromJsonAsync<TeacherReadingReportResponse>($"api/TeacherReadingReports/semester/{semesterId}/teacher/{teacherId}?periodStart={periodStart:yyyy-MM-dd}&periodEnd={periodEnd:yyyy-MM-dd}");
+        }
+        catch (Exception)
+        {
+            errorMessage = "Не вдалося сформувати звіт. Перевірте період і з’єднання із сервером.";
+        }
+        finally { isLoading = false; }
+    }
+
+    private static string GetLessonTypeName(LessonType value) => value switch
+    { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
+}

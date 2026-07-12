@@ -66,9 +66,6 @@ public class DayScheduleReportsController : ControllerBase
         var semester = await _semesterRepository.GetByIdAsync(semesterId);
         if (semester is null)
             return (null, NotFound(new { Message = $"Семестр з ID {semesterId} не знайдено." }));
-        if (scheduleDate.Date < semester.StartDate.Date || scheduleDate.Date > semester.EndDate.Date)
-            return (null, BadRequest(new { Message = $"Дата повинна бути в межах семестру: {semester.StartDate:dd.MM.yyyy}–{semester.EndDate:dd.MM.yyyy}." }));
-
         return (semester, null);
     }
 
