@@ -586,6 +586,26 @@ public class RealLessonsController : ControllerBase
             });
         }
 
+        if (!IsValidOptionalWebLink(dto.ConferenceLink))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Посилання на конференцію повинно бути " +
+                    "повною адресою, що починається з http:// або https://."
+            });
+        }
+
+        if (!IsValidOptionalWebLink(dto.ResourceLink))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Посилання на матеріали повинно бути " +
+                    "повною адресою, що починається з http:// або https://."
+            });
+        }
+
         bool updated =
             await _lessonRepository.UpdateLinksAsync(
                 id,
@@ -832,6 +852,28 @@ public class RealLessonsController : ControllerBase
             });
         }
 
+        if (!IsValidOptionalWebLink(
+                lesson.ConferenceLink))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Посилання на конференцію повинно бути " +
+                    "повною адресою, що починається з http:// або https://."
+            });
+        }
+
+        if (!IsValidOptionalWebLink(
+                lesson.ResourceLink))
+        {
+            return BadRequest(new
+            {
+                Message =
+                    "Посилання на матеріали повинно бути " +
+                    "повною адресою, що починається з http:// або https://."
+            });
+        }
+
         lesson.GroupId =
             groupDiscipline.GroupId;
 
@@ -904,6 +946,26 @@ public class RealLessonsController : ControllerBase
         return string.IsNullOrWhiteSpace(value)
             ? null
             : value.Trim();
+    }
+
+    private static bool IsValidOptionalWebLink(
+        string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        if (!Uri.TryCreate(
+                value.Trim(),
+                UriKind.Absolute,
+                out var uri))
+        {
+            return false;
+        }
+
+        return uri.Scheme == Uri.UriSchemeHttp ||
+               uri.Scheme == Uri.UriSchemeHttps;
     }
 
     private ActionResult?
