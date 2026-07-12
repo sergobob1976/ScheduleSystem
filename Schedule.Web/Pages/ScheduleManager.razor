@@ -17,7 +17,7 @@
         <option value="">Оберіть тиждень</option>@foreach (var item in weeks) { <option value="@item.WeekStartDate.ToString("yyyy-MM-dd")">@item.ActiveStartDate.ToString("dd.MM")–@item.ActiveEndDate.ToString("dd.MM.yyyy") · @item.RecommendedWeekPropertyName @(item.IsTransferred ? "· перенесено" : "")</option> }
     </select></div>
     <div class="col-md-3"><label class="form-label fw-bold">Фільтр групи</label><select class="form-select" @bind="scheduleGroupId" @bind:after="LoadSchedule"><option value="0">Усі групи</option>@foreach(var group in groups){<option value="@group.Id">@group.Name</option>}</select></div>
-    <div class="col-md-2"><button class="btn btn-primary w-100" disabled="@(SelectedWeek is null || SelectedWeek.IsTransferred || isTransferring)" @onclick="TransferWeek">@(isTransferring ? "Перенесення…" : "Перенести")</button></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" disabled="@(SelectedWeek is null || SelectedWeek.IsTransferred || isTransferring || isLoadingSchedule)" @onclick="TransferWeek">@(isTransferring ? "Перенесення…" : "Перенести")</button></div>
 </div></div></div>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
@@ -47,7 +47,8 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
 
 <div class="card shadow-sm"><div class="card-header bg-white d-flex justify-content-between"><strong>Заняття вибраного тижня</strong><span class="badge bg-primary">@lessons.Count</span></div>
 <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Дата</th><th>Пара</th><th>Група</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Стан</th><th>Дії</th></tr></thead>
-<tbody>@if (lessons.Count == 0) { <tr><td colspan="8" class="text-center text-muted py-4">Занять немає.</td></tr> }
+<tbody>@if (isLoadingSchedule) { <tr><td colspan="8" class="text-center text-muted py-4">Завантаження…</td></tr> }
+else if (lessons.Count == 0) { <tr><td colspan="8" class="text-center text-muted py-4">Занять немає.</td></tr> }
 else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM.yyyy")</td><td>@item.LessonPosition</td><td>@item.Group?.Name</td><td>@item.Discipline?.Name
     @if (!string.IsNullOrWhiteSpace(item.ResourceLink)) { <div><a class="small" href="@item.ResourceLink" target="_blank" rel="noopener noreferrer">Матеріали</a></div> }
 </td><td>@item.Teacher?.Name
@@ -97,6 +98,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private bool isSavingLesson;
     private bool isChangingStatus;
     private int deletingLessonId;
+    private bool isLoadingSchedule;
     private string weekStart = "";
     private WeekProperty transferProperty = WeekProperty.Numerator;
     private string errorMessage = "";
@@ -118,7 +120,29 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         await LoadWeeks();
     }
     private async Task LoadWeeks() { weeks = semesterId > 0 ? await Http.GetFromJsonAsync<List<RealLessonTransferWeekOption>>($"api/RealLessons/transfer-week-options/semester/{semesterId}") ?? [] : []; weekStart = ""; lessons = []; }
-    private async Task LoadSchedule() { errorMessage = ""; successMessage = ""; var week = SelectedWeek; if (week is null) { lessons = []; return; } transferProperty = week.RecommendedWeekProperty; var groupQuery = scheduleGroupId > 0 ? $"?groupId={scheduleGroupId}" : ""; lessons = await Http.GetFromJsonAsync<List<RealLesson>>($"api/RealLessons/semester/{semesterId}/week/{week.WeekStartDate:yyyy-MM-dd}{groupQuery}") ?? []; }
+    private async Task LoadSchedule()
+    {
+        errorMessage = "";
+        successMessage = "";
+        lessons = [];
+        var week = SelectedWeek;
+        if (week is null) return;
+        transferProperty = week.RecommendedWeekProperty;
+        var groupQuery = scheduleGroupId > 0 ? $"?groupId={scheduleGroupId}" : "";
+        isLoadingSchedule = true;
+        try
+        {
+            lessons = await Http.GetFromJsonAsync<List<RealLesson>>($"api/RealLessons/semester/{semesterId}/week/{week.WeekStartDate:yyyy-MM-dd}{groupQuery}") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося завантажити реальний розклад. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            isLoadingSchedule = false;
+        }
+    }
     private async Task TransferWeek()
     {
         var week = SelectedWeek; if (week is null) return;
@@ -163,7 +187,13 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         try
         {
             var response = await Http.PatchAsJsonAsync($"api/RealLessons/{lesson.Id}/status", new UpdateRealLessonStatusRequest { Status = status });
-            if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); await LoadSchedule(); return; }
+            if (!response.IsSuccessStatusCode)
+            {
+                var message = await ReadMessage(response);
+                await LoadSchedule();
+                errorMessage = message;
+                return;
+            }
             lesson.Status = status;
             await RefreshLoadedReports();
             successMessage = $"Стан заняття змінено на «{GetStatusName(status)}».";
