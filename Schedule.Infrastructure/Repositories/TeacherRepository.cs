@@ -39,14 +39,14 @@ public class TeacherRepository : ITeacherRepository
     public async Task<int> CreateAsync(Teacher teacher)
     {
         using var connection = CreateConnection();
-        string sql = "INSERT INTO `Teachers` (Name, Position) VALUES (@Name, @Position); SELECT LAST_INSERT_ID();";
+        string sql = "INSERT INTO `Teachers` (Name, Position, Email) VALUES (@Name, @Position, @Email); SELECT LAST_INSERT_ID();";
         return await connection.ExecuteScalarAsync<int>(sql, teacher);
     }
 
     public async Task<bool> UpdateAsync(Teacher teacher)
     {
         using var connection = CreateConnection();
-        string sql = "UPDATE `Teachers` SET Name = @Name, Position = @Position WHERE Id = @Id";
+        string sql = "UPDATE `Teachers` SET Name = @Name, Position = @Position, Email = @Email WHERE Id = @Id";
         int rowsAffected = await connection.ExecuteAsync(sql, teacher);
         return rowsAffected > 0;
     }

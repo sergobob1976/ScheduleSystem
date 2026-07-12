@@ -23,6 +23,7 @@ public class DayScheduleLessonItem
     public int LessonPosition { get; set; }
     public string DisciplineName { get; set; } = string.Empty;
     public string TeacherName { get; set; } = string.Empty;
+    public string? TeacherEmail { get; set; }
     public string? ClassRoomName { get; set; }
     public string? ConferenceLink { get; set; }
     public string? ResourceLink { get; set; }

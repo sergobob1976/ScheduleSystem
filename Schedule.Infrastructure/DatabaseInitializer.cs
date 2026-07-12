@@ -88,7 +88,9 @@ public class DatabaseInitializer
             (
                 `Id` INT AUTO_INCREMENT PRIMARY KEY,
                 `Name` VARCHAR(100) NOT NULL UNIQUE,
-                `Position` VARCHAR(100) NULL
+                `Position` VARCHAR(100) NULL,
+                `Email` VARCHAR(254) NULL,
+                UNIQUE KEY `UX_Teachers_Email` (`Email`)
             )
             ENGINE=InnoDB
             DEFAULT CHARSET=utf8mb4
@@ -510,6 +512,25 @@ public class DatabaseInitializer
     private static void UpdateExistingTables(
         IDbConnection connection)
     {
+        EnsureColumn(
+            connection,
+            "Teachers",
+            "Email",
+            """
+            ALTER TABLE `Teachers`
+            ADD COLUMN `Email` VARCHAR(254) NULL
+            AFTER `Position`;
+            """);
+
+        EnsureIndex(
+            connection,
+            "Teachers",
+            "UX_Teachers_Email",
+            """
+            CREATE UNIQUE INDEX `UX_Teachers_Email`
+            ON `Teachers` (`Email`);
+            """);
+
         EnsureColumn(
             connection,
             "Semesters",

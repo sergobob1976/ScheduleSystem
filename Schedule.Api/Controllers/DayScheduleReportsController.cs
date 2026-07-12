@@ -4,6 +4,7 @@ using Schedule.Core.DTOs;
 using Schedule.Core.Enums;
 using Schedule.Core.Extensions;
 using Schedule.Core.Interfaces;
+using Schedule.Core.Services;
 
 namespace Schedule.Api.Controllers;
 
@@ -101,7 +102,8 @@ public class DayScheduleReportsController : ControllerBase
                     {
                         LessonPosition = x.LessonPosition,
                         DisciplineName = x.Discipline?.Name ?? "Дисципліну не вказано",
-                        TeacherName = x.Teacher?.Name ?? "Викладача не вказано",
+                        TeacherName = TeacherNameFormatter.ToNameSurname(x.Teacher?.Name) is { Length: > 0 } teacherName ? teacherName : "Викладача не вказано",
+                        TeacherEmail = x.Teacher?.Email,
                         ClassRoomName = x.ClassRoom?.Name,
                         ConferenceLink = x.ConferenceLink,
                         ResourceLink = x.ResourceLink,

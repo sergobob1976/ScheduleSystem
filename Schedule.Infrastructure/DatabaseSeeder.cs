@@ -90,32 +90,51 @@ public static class DatabaseSeeder
 
 
             INSERT IGNORE INTO `Teachers`
-                (`Name`, `Position`)
+                (`Name`, `Position`, `Email`)
             VALUES
                 (
                     'Іваненко Олександр Петрович',
-                    'Професор'
+                    'Професор',
+                    'o.ivanenko@college.cv.ua'
                 ),
                 (
                     'Петренко Марія Василівна',
-                    'Доцент'
+                    'Доцент',
+                    'm.petrenko@college.cv.ua'
                 ),
                 (
                     'Коваль Андрій Ігорович',
-                    'Старший викладач'
+                    'Старший викладач',
+                    'a.koval@college.cv.ua'
                 ),
                 (
                     'Мельник Олена Сергіївна',
-                    'Доцент'
+                    'Доцент',
+                    'o.melnyk@college.cv.ua'
                 ),
                 (
                     'Бондар Сергій Миколайович',
-                    'Асистент'
+                    'Асистент',
+                    's.bondar@college.cv.ua'
                 ),
                 (
                     'Шевченко Наталія Олегівна',
-                    'Старший викладач'
+                    'Старший викладач',
+                    'n.shevchenko@college.cv.ua'
                 );
+
+            UPDATE `Teachers` SET `Email` = 'o.ivanenko@college.cv.ua'
+            WHERE `Name` = 'Іваненко Олександр Петрович' AND `Email` IS NULL;
+            UPDATE `Teachers` SET `Email` = 'm.petrenko@college.cv.ua'
+            WHERE `Name` = 'Петренко Марія Василівна' AND `Email` IS NULL;
+            UPDATE `Teachers` SET `Email` = 'a.koval@college.cv.ua'
+            WHERE `Name` = 'Коваль Андрій Ігорович' AND `Email` IS NULL;
+            UPDATE `Teachers` SET `Email` = 'o.melnyk@college.cv.ua'
+            WHERE `Name` = 'Мельник Олена Сергіївна' AND `Email` IS NULL;
+            UPDATE `Teachers` SET `Email` = 's.bondar@college.cv.ua'
+            WHERE `Name` = 'Бондар Сергій Миколайович' AND `Email` IS NULL;
+            UPDATE `Teachers` SET `Email` = 'n.shevchenko@college.cv.ua'
+            WHERE `Name` = 'Шевченко Наталія Олегівна' AND `Email` IS NULL;
 
 
             INSERT IGNORE INTO `ClassRooms`

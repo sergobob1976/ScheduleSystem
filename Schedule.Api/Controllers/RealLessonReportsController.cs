@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Schedule.Core.DTOs;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Constants;
+using Schedule.Core.Services;
 
 namespace Schedule.Api.Controllers;
 
@@ -189,7 +190,7 @@ public class RealLessonReportsController
             SemesterId = semester.Id,
             SemesterName = semester.Name,
             TeacherId = teacher.Id,
-            TeacherName = teacher.Name,
+            TeacherName = TeacherNameFormatter.ToNameSurname(teacher.Name),
             ReportDate = actualReportDate,
             AcademicHoursPerLesson =
                 ScheduleConstants

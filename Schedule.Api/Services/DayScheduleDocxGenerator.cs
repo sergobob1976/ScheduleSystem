@@ -54,19 +54,10 @@ public class DayScheduleDocxGenerator
                 var discipline = lesson.Status == RealLessonStatus.Cancelled
                     ? $"{lesson.DisciplineName} (скасовано)"
                     : lesson.DisciplineName;
-                if (!string.IsNullOrWhiteSpace(lesson.ResourceLink))
-                    discipline += $"\nМатеріали: {lesson.ResourceLink}";
-
-                var teacher = lesson.TeacherName;
-                if (!string.IsNullOrWhiteSpace(lesson.ClassRoomName))
-                    teacher += $"\nАудиторія: {lesson.ClassRoomName}";
-                if (!string.IsNullOrWhiteSpace(lesson.ConferenceLink))
-                    teacher += $"\nКонференція: {lesson.ConferenceLink}";
-
                 xml.Append("<w:tr><w:trPr><w:cantSplit/></w:trPr>");
                 xml.Append(CreateCell(lesson.LessonPosition.ToString(), 450, true, true));
-                xml.Append(CreateCell(discipline, 6450));
-                xml.Append(CreateCell(teacher, 4095));
+                xml.Append(CreateDisciplineCell(discipline, lesson.ResourceLink));
+                xml.Append(CreateTeacherCell(lesson));
                 xml.Append("</w:tr>");
             }
         }
@@ -90,6 +81,53 @@ public class DayScheduleDocxGenerator
         var paragraphProperties = centered ? "<w:pPr><w:jc w:val=\"center\"/></w:pPr>" : "";
         return $"<w:tc>{cellProperties}<w:p>{paragraphProperties}{CreateRuns(text, bold)}</w:p></w:tc>";
     }
+
+    private static string CreateDisciplineCell(string disciplineName, string? resourceLink)
+    {
+        var content = new StringBuilder();
+        content.Append(CreateRuns(disciplineName, false));
+        content.Append("<w:r><w:br/></w:r>");
+        if (string.IsNullOrWhiteSpace(resourceLink))
+        {
+            content.Append(CreateDownloadRun(false));
+        }
+        else
+        {
+            content.Append($"<w:fldSimple w:instr=\" HYPERLINK &quot;{SecurityElement.Escape(resourceLink.Trim())}&quot; \">{CreateDownloadRun(true)}</w:fldSimple>");
+        }
+
+        return $"<w:tc><w:tcPr><w:tcW w:w=\"6450\" w:type=\"dxa\"/><w:vAlign w:val=\"center\"/><w:tcMar><w:top w:w=\"70\" w:type=\"dxa\"/><w:left w:w=\"90\" w:type=\"dxa\"/><w:bottom w:w=\"70\" w:type=\"dxa\"/><w:right w:w=\"90\" w:type=\"dxa\"/></w:tcMar></w:tcPr><w:p>{content}</w:p></w:tc>";
+    }
+
+    private static string CreateDownloadRun(bool isLink) =>
+        $"<w:r><w:rPr><w:i/>{(isLink ? "<w:color w:val=\"0563C1\"/><w:u w:val=\"single\"/>" : "<w:color w:val=\"666666\"/>")}<w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/></w:rPr><w:t>Завантажити</w:t></w:r>";
+
+    private static string CreateTeacherCell(DayScheduleLessonItem lesson)
+    {
+        var content = new StringBuilder();
+        content.Append(CreateRuns(lesson.TeacherName, false));
+        if (!string.IsNullOrWhiteSpace(lesson.TeacherEmail))
+        {
+            var email = SecurityElement.Escape(lesson.TeacherEmail.Trim());
+            content.Append("<w:r><w:br/></w:r>");
+            content.Append($"<w:fldSimple w:instr=\" HYPERLINK &quot;mailto:{email}&quot; \"><w:r><w:rPr><w:i/><w:color w:val=\"0563C1\"/><w:u w:val=\"single\"/><w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/></w:rPr><w:t>{email}</w:t></w:r></w:fldSimple>");
+        }
+        if (!string.IsNullOrWhiteSpace(lesson.ClassRoomName))
+        {
+            content.Append("<w:r><w:br/></w:r>");
+            content.Append(CreateSmallRun($"Аудиторія: {lesson.ClassRoomName}"));
+        }
+        if (!string.IsNullOrWhiteSpace(lesson.ConferenceLink))
+        {
+            content.Append("<w:r><w:br/></w:r>");
+            content.Append(CreateSmallRun($"Конференція: {lesson.ConferenceLink}"));
+        }
+
+        return $"<w:tc><w:tcPr><w:tcW w:w=\"4095\" w:type=\"dxa\"/><w:vAlign w:val=\"center\"/><w:tcMar><w:top w:w=\"70\" w:type=\"dxa\"/><w:left w:w=\"90\" w:type=\"dxa\"/><w:bottom w:w=\"70\" w:type=\"dxa\"/><w:right w:w=\"90\" w:type=\"dxa\"/></w:tcMar></w:tcPr><w:p>{content}</w:p></w:tc>";
+    }
+
+    private static string CreateSmallRun(string text) =>
+        $"<w:r><w:rPr><w:sz w:val=\"22\"/><w:szCs w:val=\"22\"/></w:rPr><w:t xml:space=\"preserve\">{SecurityElement.Escape(text)}</w:t></w:r>";
 
     private static string CreateRuns(string text, bool bold)
     {

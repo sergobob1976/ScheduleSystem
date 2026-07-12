@@ -2,6 +2,7 @@
 @using Schedule.Core.DTOs
 @using Schedule.Core.Enums
 @using Schedule.Core.Models
+@using Schedule.Core.Services
 @inject HttpClient Http
 
 <h1 class="h3 mb-3">Вичитка викладача</h1>
@@ -9,7 +10,7 @@
 
 <div class="card shadow-sm mb-4"><div class="card-body"><div class="row g-3 align-items-end">
     <div class="col-md-3"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="ChangeSemester"><option value="0">Оберіть семестр</option>@foreach(var item in semesters){<option value="@item.Id">@item.Name</option>}</select></div>
-    <div class="col-md-3"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="teacherId" @bind:after="ClearReport"><option value="0">Оберіть викладача</option>@foreach(var item in AvailableTeachers){<option value="@item.Id">@item.Name</option>}</select></div>
+    <div class="col-md-3"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="teacherId" @bind:after="ClearReport"><option value="0">Оберіть викладача</option>@foreach(var item in AvailableTeachers){<option value="@item.Id">@TeacherNameFormatter.ToNameSurname(item.Name)</option>}</select></div>
     <div class="col-md-2"><label class="form-label fw-bold">Початок</label><input type="date" class="form-control" min="@SemesterStart" max="@SemesterEnd" @bind="periodStart" @bind:format="yyyy-MM-dd" @bind:after="ClearReport" /></div>
     <div class="col-md-2"><label class="form-label fw-bold">Завершення</label><input type="date" class="form-control" min="@SemesterStart" max="@SemesterEnd" @bind="periodEnd" @bind:format="yyyy-MM-dd" @bind:after="ClearReport" /></div>
     <div class="col-md-2"><button class="btn btn-primary w-100" disabled="@isLoading" @onclick="LoadReport">@(isLoading ? "Завантаження…" : "Показати")</button></div>
@@ -19,6 +20,7 @@
 
 @if (report is not null)
 {
+    <div class="d-flex justify-content-end mb-3"><a class="btn btn-success" href="@DownloadUrl">Завантажити Word (.docx)</a></div>
     <div class="card shadow-sm mb-4"><div class="card-body"><div class="row text-center g-3">
         <div class="col-md-4"><div class="text-muted small">Викладач</div><strong>@report.TeacherName</strong></div>
         <div class="col-md-4"><div class="text-muted small">Проведено пар</div><strong>@report.TotalLessons</strong></div>
@@ -64,6 +66,7 @@
     private IEnumerable<Teacher> AvailableTeachers => teachers.Where(teacher => teacherSemesterLoads.Any(load => load.SemesterId == semesterId && load.TeacherId == teacher.Id));
     private string SemesterStart => SelectedSemester?.StartDate.ToString("yyyy-MM-dd") ?? "";
     private string SemesterEnd => SelectedSemester?.EndDate.ToString("yyyy-MM-dd") ?? "";
+    private string DownloadUrl => new Uri(Http.BaseAddress!, $"api/TeacherReadingReports/semester/{semesterId}/teacher/{teacherId}/docx?periodStart={periodStart:yyyy-MM-dd}&periodEnd={periodEnd:yyyy-MM-dd}").ToString();
 
     protected override async Task OnInitializedAsync()
     {

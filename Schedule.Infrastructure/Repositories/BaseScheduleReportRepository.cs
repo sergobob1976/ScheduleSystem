@@ -202,7 +202,7 @@ public class BaseScheduleReportRepository
             SemesterId = header.SemesterId,
             SemesterName = header.SemesterName,
             TeacherId = header.TeacherId,
-            TeacherName = header.TeacherName,
+            TeacherName = TeacherNameFormatter.ToNameSurname(header.TeacherName),
             AcademicHoursPerLesson =
                 academicHoursPerLesson,
             PlannedHours = header.PlannedHours,

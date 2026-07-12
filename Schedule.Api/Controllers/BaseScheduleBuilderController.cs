@@ -254,8 +254,8 @@ public class BaseScheduleBuilderController
                                 assignment.TeacherId,
 
                             TeacherName =
-                                assignment.Teacher?.Name
-                                ?? string.Empty,
+                                TeacherNameFormatter.ToNameSurname(
+                                    assignment.Teacher?.Name),
 
                             LessonType =
                                 assignment.LessonType,
@@ -445,8 +445,8 @@ public class BaseScheduleBuilderController
                         TeacherId =
                             baseLesson.TeacherId,
                         TeacherName =
-                            baseLesson.Teacher?.Name
-                            ?? string.Empty,
+                            TeacherNameFormatter.ToNameSurname(
+                                baseLesson.Teacher?.Name),
                         ClassRoomId =
                             baseLesson.ClassRoomId,
                         ClassRoomName =

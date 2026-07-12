@@ -47,6 +47,15 @@
                            @bind="form.Position" />
                 </div>
 
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Email</label>
+                    <input type="email"
+                           class="form-control"
+                           maxlength="254"
+                           placeholder="name@college.cv.ua"
+                           @bind="form.Email" />
+                </div>
+
                 <div class="d-flex gap-2">
                     <button class="btn btn-primary flex-grow-1"
                             disabled="@isSaving"
@@ -95,7 +104,7 @@
 
                 <input type="text"
                        class="form-control"
-                       placeholder="ПІБ або посада"
+                       placeholder="ПІБ, посада або email"
                        @bind="searchText"
                        @bind:event="oninput" />
             </div>
@@ -131,6 +140,8 @@
                                         Посада
                                     </th>
 
+                                    <th>Email</th>
+
                                     <th style="width: 25%"
                                         class="text-center">
                                         Дії
@@ -156,6 +167,8 @@
                                                 ? "—"
                                                 : teacher.Position)
                                         </td>
+
+                                        <td>@(teacher.Email ?? "—")</td>
 
                                         <td class="text-center">
                                             <div class="btn-group btn-group-sm">
@@ -222,6 +235,14 @@
                             x.Position.Contains(
                                 value,
                                 StringComparison.OrdinalIgnoreCase)
+                        )
+                        ||
+                        (
+                            x.Email != null
+                            &&
+                            x.Email.Contains(
+                                value,
+                                StringComparison.OrdinalIgnoreCase)
                         ));
             }
 
@@ -266,6 +287,12 @@
             return;
         }
 
+        if (string.IsNullOrWhiteSpace(form.Email))
+        {
+            ShowError("Email викладача не може бути порожнім.");
+            return;
+        }
+
         isSaving = true;
 
         try
@@ -276,6 +303,7 @@
                 string.IsNullOrWhiteSpace(form.Position)
                     ? null
                     : form.Position.Trim();
+            form.Email = form.Email.Trim();
 
             HttpResponseMessage response;
 
@@ -339,7 +367,8 @@
         {
             Id = teacher.Id,
             Name = teacher.Name,
-            Position = teacher.Position
+            Position = teacher.Position,
+            Email = teacher.Email
         };
 
         message = "";
@@ -403,7 +432,8 @@
         return new Teacher
         {
             Name = "",
-            Position = null
+            Position = null,
+            Email = null
         };
     }
 

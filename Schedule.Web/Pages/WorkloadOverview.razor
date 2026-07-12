@@ -3,6 +3,7 @@
 @using System.Reflection
 @using Schedule.Core.Enums
 @using Schedule.Core.Models
+@using Schedule.Core.Services
 @inject HttpClient Http
 
 <h3 class="mb-2">📈 Контроль навчального навантаження</h3>
@@ -769,8 +770,10 @@ else
             TeacherId = semesterLoad.TeacherId,
 
             TeacherName =
-                teacher?.Name
-                ?? $"ID {semesterLoad.TeacherId}",
+                teacher is null
+                    ? $"ID {semesterLoad.TeacherId}"
+                    : TeacherNameFormatter.ToNameSurname(
+                        teacher.Name),
 
             Position =
                 string.IsNullOrWhiteSpace(
@@ -876,9 +879,11 @@ else
                             new TeacherAssignmentRow
                             {
                                 TeacherName =
-                                    x.Teacher?.Name
-                                    ?? GetTeacherName(
-                                        x.TeacherId),
+                                    x.Teacher is null
+                                        ? GetTeacherName(
+                                            x.TeacherId)
+                                        : TeacherNameFormatter.ToNameSurname(
+                                            x.Teacher.Name),
 
                                 AssignedHours =
                                     x.AssignedHours
@@ -913,10 +918,12 @@ else
 
     private string GetTeacherName(int id)
     {
-        return teachers?
+        var name = teachers?
             .FirstOrDefault(x => x.Id == id)?
-            .Name
-            ?? $"ID {id}";
+            .Name;
+        return string.IsNullOrWhiteSpace(name)
+            ? $"ID {id}"
+            : TeacherNameFormatter.ToNameSurname(name);
     }
 
     private static string GetLessonTypeName(

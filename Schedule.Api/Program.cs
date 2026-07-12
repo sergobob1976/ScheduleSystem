@@ -24,6 +24,7 @@ builder.Services.AddControllers();
 
 builder.Services.AddTransient<DatabaseInitializer>();
 builder.Services.AddSingleton<DayScheduleDocxGenerator>();
+builder.Services.AddSingleton<TeacherReadingDocxGenerator>();
 
 builder.Services.AddScoped<
     IGroupRepository,

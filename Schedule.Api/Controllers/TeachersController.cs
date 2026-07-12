@@ -2,6 +2,7 @@
 using MySqlConnector;
 using Schedule.Core.Interfaces;
 using Schedule.Core.Models;
+using System.Net.Mail;
 
 namespace Schedule.Api.Controllers;
 
@@ -74,7 +75,7 @@ public class TeachersController : ControllerBase
             return Conflict(new
             {
                 Message =
-                    "Викладач із таким ПІБ уже існує."
+                    "Викладач із таким ПІБ або email уже існує."
             });
         }
     }
@@ -135,7 +136,7 @@ public class TeachersController : ControllerBase
             return Conflict(new
             {
                 Message =
-                    "Викладач із таким ПІБ уже існує."
+                    "Викладач із таким ПІБ або email уже існує."
             });
         }
     }
@@ -200,6 +201,9 @@ public class TeachersController : ControllerBase
             teacher.Position)
             ? null
             : teacher.Position.Trim();
+        teacher.Email = string.IsNullOrWhiteSpace(teacher.Email)
+            ? null
+            : teacher.Email.Trim();
 
         if (teacher.Name.Length > 100)
         {
@@ -216,6 +220,23 @@ public class TeachersController : ControllerBase
             {
                 Message =
                     "Посада не може містити більше 100 символів."
+            });
+        }
+
+        if (teacher.Email == null)
+        {
+            return BadRequest(new
+            {
+                Message = "Email викладача не може бути порожнім."
+            });
+        }
+
+        if (teacher.Email.Length > 254 ||
+            !MailAddress.TryCreate(teacher.Email, out _))
+        {
+            return BadRequest(new
+            {
+                Message = "Вкажіть коректний email викладача."
             });
         }
 
