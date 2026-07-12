@@ -12,11 +12,11 @@
 <div class="card shadow-sm mb-4"><div class="card-body">
     <div class="row g-3 align-items-end">
         <div class="col-md-5"><label class="form-label fw-bold">Семестр</label>
-            <select class="form-select" @bind="semesterId"><option value="0">Оберіть семестр</option>
+            <select class="form-select" @bind="semesterId" @bind:after="ChangeSemester"><option value="0">Оберіть семестр</option>
                 @foreach (var item in semesters) { <option value="@item.Id">@item.Name</option> }
             </select></div>
         <div class="col-md-5"><label class="form-label fw-bold">Група</label>
-            <select class="form-select" @bind="groupId"><option value="0">Оберіть групу</option>
+            <select class="form-select" @bind="groupId" @bind:after="ChangeGroup"><option value="0">Оберіть групу</option>
                 @foreach (var item in groups) { <option value="@item.Id">@item.Name</option> }
             </select></div>
         <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="LoadBuilder" disabled="@isLoading">Показати</button></div>
@@ -157,6 +157,28 @@ else if (data is not null)
         assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
         classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
         teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
+    }
+
+    private void ChangeSemester()
+    {
+        groupId = 0;
+        reportTeacherId = 0;
+        teacherReport = null;
+        ResetBuilderState();
+    }
+
+    private void ChangeGroup() => ResetBuilderState();
+
+    private void ResetBuilderState()
+    {
+        data = null;
+        projection = null;
+        baseLessons = [];
+        selectedWeek = WeekProperty.Numerator;
+        showEditor = false;
+        editingLessonId = 0;
+        errorMessage = "";
+        successMessage = "";
     }
 
     private void OpenEditor(WeekDay day, int position) { editingLessonId = 0; editorDay = day; editorPosition = position; editorWeekProperty = selectedWeek; assignmentId = 0; classRoomId = 0; showEditor = true; errorMessage = ""; }
