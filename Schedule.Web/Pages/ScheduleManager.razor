@@ -62,7 +62,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
 <div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Фактична вичитка годин</strong></div><div class="card-body"><div class="row g-3 align-items-end">
     <div class="col-md-5"><label class="form-label fw-bold">Група</label><select class="form-select" @bind="reportGroupId"><option value="0">Оберіть групу</option>@foreach(var group in groups){<option value="@group.Id">@group.Name</option>}</select></div>
     <div class="col-md-4"><label class="form-label fw-bold">Станом на дату</label><input type="date" class="form-control" @bind="reportDate" @bind:format="yyyy-MM-dd" /></div>
-    <div class="col-md-3"><button class="btn btn-outline-primary w-100" @onclick="LoadHoursReport">Показати звіт</button></div>
+    <div class="col-md-3"><button class="btn btn-outline-primary w-100" disabled="@isLoadingGroupReport" @onclick="LoadHoursReport">@(isLoadingGroupReport ? "Завантаження…" : "Показати звіт")</button></div>
 </div></div>
 @if (hoursReport is not null) { <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead class="table-light"><tr><th>Дисципліна</th><th>План</th><th>Проведено</th><th>Майбутні</th><th>Не підтверджено</th><th>Скасовано</th><th>Залишок</th></tr></thead><tbody>
 @foreach(var item in hoursReport.Disciplines){<tr><td class="fw-semibold">@item.DisciplineName</td><td>@item.PlannedHours</td><td class="text-success">@item.CompletedHours</td><td>@item.PlannedFutureHours</td><td class="text-warning">@item.UnconfirmedPastHours</td><td class="text-danger">@item.CancelledHours</td><td class="fw-bold">@item.RemainingHours</td></tr>}
@@ -71,7 +71,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
 <div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Вичитка годин викладача</strong></div><div class="card-body"><div class="row g-3 align-items-end">
     <div class="col-md-5"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="reportTeacherId"><option value="0">Оберіть викладача</option>@foreach(var teacher in teachers){<option value="@teacher.Id">@teacher.Name</option>}</select></div>
     <div class="col-md-4"><label class="form-label fw-bold">Станом на дату</label><input type="date" class="form-control" @bind="teacherReportDate" @bind:format="yyyy-MM-dd" /></div>
-    <div class="col-md-3"><button class="btn btn-outline-primary w-100" @onclick="LoadTeacherHoursReport">Показати звіт</button></div>
+    <div class="col-md-3"><button class="btn btn-outline-primary w-100" disabled="@isLoadingTeacherReport" @onclick="LoadTeacherHoursReport">@(isLoadingTeacherReport ? "Завантаження…" : "Показати звіт")</button></div>
 </div></div>
 @if (teacherHoursReport is not null) { <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead class="table-light"><tr><th>Дисципліна</th><th>План</th><th>Проведено</th><th>Майбутні</th><th>Не підтверджено</th><th>Скасовано</th><th>Залишок</th></tr></thead><tbody>
 @foreach(var item in teacherHoursReport.Disciplines){<tr><td class="fw-semibold">@item.DisciplineName</td><td>@item.PlannedHours</td><td class="text-success">@item.CompletedHours</td><td>@item.PlannedFutureHours</td><td class="text-warning">@item.UnconfirmedPastHours</td><td class="text-danger">@item.CancelledHours</td><td class="fw-bold">@item.RemainingHours</td></tr>}
@@ -99,6 +99,8 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private bool isChangingStatus;
     private int deletingLessonId;
     private bool isLoadingSchedule;
+    private bool isLoadingGroupReport;
+    private bool isLoadingTeacherReport;
     private string weekStart = "";
     private WeekProperty transferProperty = WeekProperty.Numerator;
     private string errorMessage = "";
@@ -256,8 +258,45 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
             deletingLessonId = 0;
         }
     }
-    private async Task LoadHoursReport() { if (semesterId <= 0 || reportGroupId <= 0) { errorMessage = "Оберіть семестр і групу для звіту."; return; } errorMessage = ""; hoursReport = await Http.GetFromJsonAsync<RealLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/group/{reportGroupId}/hours?reportDate={reportDate:yyyy-MM-dd}"); }
-    private async Task LoadTeacherHoursReport() { if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача для звіту."; return; } errorMessage = ""; teacherHoursReport = await Http.GetFromJsonAsync<TeacherLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/teacher/{reportTeacherId}/hours?reportDate={teacherReportDate:yyyy-MM-dd}"); }
+    private async Task LoadHoursReport()
+    {
+        if (semesterId <= 0 || reportGroupId <= 0) { errorMessage = "Оберіть семестр і групу для звіту."; return; }
+        errorMessage = "";
+        isLoadingGroupReport = true;
+        try
+        {
+            hoursReport = await Http.GetFromJsonAsync<RealLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/group/{reportGroupId}/hours?reportDate={reportDate:yyyy-MM-dd}");
+        }
+        catch (Exception)
+        {
+            hoursReport = null;
+            errorMessage = "Не вдалося завантажити звіт групи. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            isLoadingGroupReport = false;
+        }
+    }
+
+    private async Task LoadTeacherHoursReport()
+    {
+        if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача для звіту."; return; }
+        errorMessage = "";
+        isLoadingTeacherReport = true;
+        try
+        {
+            teacherHoursReport = await Http.GetFromJsonAsync<TeacherLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/teacher/{reportTeacherId}/hours?reportDate={teacherReportDate:yyyy-MM-dd}");
+        }
+        catch (Exception)
+        {
+            teacherHoursReport = null;
+            errorMessage = "Не вдалося завантажити звіт викладача. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            isLoadingTeacherReport = false;
+        }
+    }
     private async Task RefreshLoadedReports()
     {
         if (hoursReport is not null) await LoadHoursReport();
