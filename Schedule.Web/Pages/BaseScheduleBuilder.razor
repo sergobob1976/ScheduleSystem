@@ -24,7 +24,13 @@
 </div></div>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
-@if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-success">@successMessage</div> }
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success d-flex justify-content-between align-items-center gap-3">
+        <span>@successMessage</span>
+        <button type="button" class="btn btn-sm btn-success" @onclick="DismissSuccessMessage">ОК</button>
+    </div>
+}
 @if (isLoading) { <div class="alert alert-info">Завантаження базового розкладу…</div> }
 else if (data is not null)
 {
@@ -225,6 +231,7 @@ else if (data is not null)
     private void OpenEditor(WeekDay day, int position) { editingLessonId = 0; editorDay = day; editorPosition = position; editorWeekProperty = selectedWeek; assignmentId = 0; classRoomId = 0; showEditor = true; errorMessage = ""; }
     private void OpenEdit(BaseLesson lesson) { editingLessonId = lesson.Id; editorDay = lesson.WeekDay; editorPosition = lesson.LessonPosition; editorWeekProperty = lesson.WeekProperty; assignmentId = lesson.TeachingAssignmentId ?? 0; classRoomId = lesson.ClassRoomId ?? 0; showEditor = true; errorMessage = ""; }
     private void CloseEditor() { showEditor = false; editingLessonId = 0; }
+    private void DismissSuccessMessage() => successMessage = "";
     private void SelectWeek(WeekProperty weekProperty)
     {
         if (selectedWeek == weekProperty) return;
