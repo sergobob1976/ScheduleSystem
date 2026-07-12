@@ -105,9 +105,9 @@ else if (data is not null)
                     <tr><td>@week.WeekNumber</td><td>@week.WeekStartDate.ToString("dd.MM")–@week.WeekEndDate.ToString("dd.MM.yyyy")</td><td><span class="badge @(week.WeekProperty == WeekProperty.Numerator ? "bg-primary" : "bg-secondary")">@GetWeekName(week.WeekProperty)</span></td><td>@week.Lessons.Count</td><td>@(week.Lessons.Count * data.AcademicHoursPerLesson)</td><td class="text-end"><button class="btn btn-sm btn-outline-secondary" disabled="@(week.Lessons.Count == 0)" @onclick="() => ToggleProjectionWeek(week.WeekNumber)">@(expandedProjectionWeeks.Contains(week.WeekNumber) ? "Згорнути" : "Деталі")</button></td></tr>
                     @if (expandedProjectionWeeks.Contains(week.WeekNumber))
                     {
-                        <tr><td colspan="6" class="p-0 bg-light"><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Пара</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Повторення</th></tr></thead><tbody>
+                        <tr><td colspan="6" class="p-0 bg-light"><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Пара</th><th>Дисципліна</th><th>Тип</th><th>Викладач</th><th>Аудиторія</th><th>Повторення</th></tr></thead><tbody>
                             @foreach (var lesson in week.Lessons.OrderBy(x => x.LessonDate).ThenBy(x => x.LessonPosition))
-                            { <tr><td>@lesson.LessonDate.ToString("dd.MM.yyyy")</td><td>@lesson.LessonPosition</td><td>@lesson.DisciplineName</td><td>@lesson.TeacherName</td><td>@(lesson.ClassRoomName ?? "—")</td><td>@GetWeekName(lesson.SourceWeekProperty)</td></tr> }
+                            { <tr><td>@lesson.LessonDate.ToString("dd.MM.yyyy")</td><td>@lesson.LessonPosition</td><td>@lesson.DisciplineName</td><td>@GetLessonTypeName(lesson.LessonType)</td><td>@lesson.TeacherName</td><td>@(lesson.ClassRoomName ?? "—")</td><td>@GetWeekName(lesson.SourceWeekProperty)</td></tr> }
                         </tbody></table></div></td></tr>
                     }
                 }
