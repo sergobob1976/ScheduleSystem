@@ -98,9 +98,18 @@ else if (data is not null)
     @if (projection is not null)
     {
         <div class="card shadow-sm mb-4"><div class="card-header bg-white"><strong>Проєкція шаблону на семестр</strong></div>
-            <div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0"><thead class="table-light"><tr><th>Тиждень</th><th>Дати</th><th>Тип</th><th>Занять</th></tr></thead><tbody>
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0"><thead class="table-light"><tr><th>Тиждень</th><th>Дати</th><th>Тип</th><th>Занять</th><th></th></tr></thead><tbody>
                 @foreach (var week in projection.Weeks)
-                { <tr><td>@week.WeekNumber</td><td>@week.WeekStartDate.ToString("dd.MM")–@week.WeekEndDate.ToString("dd.MM.yyyy")</td><td><span class="badge @(week.WeekProperty == WeekProperty.Numerator ? "bg-primary" : "bg-secondary")">@GetWeekName(week.WeekProperty)</span></td><td>@week.Lessons.Count</td></tr> }
+                {
+                    <tr><td>@week.WeekNumber</td><td>@week.WeekStartDate.ToString("dd.MM")–@week.WeekEndDate.ToString("dd.MM.yyyy")</td><td><span class="badge @(week.WeekProperty == WeekProperty.Numerator ? "bg-primary" : "bg-secondary")">@GetWeekName(week.WeekProperty)</span></td><td>@week.Lessons.Count</td><td class="text-end"><button class="btn btn-sm btn-outline-secondary" disabled="@(week.Lessons.Count == 0)" @onclick="() => ToggleProjectionWeek(week.WeekNumber)">@(expandedProjectionWeeks.Contains(week.WeekNumber) ? "Згорнути" : "Деталі")</button></td></tr>
+                    @if (expandedProjectionWeeks.Contains(week.WeekNumber))
+                    {
+                        <tr><td colspan="5" class="p-0 bg-light"><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Пара</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Повторення</th></tr></thead><tbody>
+                            @foreach (var lesson in week.Lessons.OrderBy(x => x.LessonDate).ThenBy(x => x.LessonPosition))
+                            { <tr><td>@lesson.LessonDate.ToString("dd.MM.yyyy")</td><td>@lesson.LessonPosition</td><td>@lesson.DisciplineName</td><td>@lesson.TeacherName</td><td>@(lesson.ClassRoomName ?? "—")</td><td>@GetWeekName(lesson.SourceWeekProperty)</td></tr> }
+                        </tbody></table></div></td></tr>
+                    }
+                }
             </tbody></table></div>
         </div>
     }
@@ -141,6 +150,7 @@ else if (data is not null)
     private bool isSaving;
     private int deletingLessonId;
     private bool isLoadingTeacherReport;
+    private HashSet<int> expandedProjectionWeeks = [];
     private string errorMessage = "";
     private string successMessage = "";
     private bool showEditor;
@@ -178,6 +188,7 @@ else if (data is not null)
         data = null;
         projection = null;
         baseLessons = [];
+        expandedProjectionWeeks.Clear();
         selectedWeek = WeekProperty.Numerator;
         showEditor = false;
         editingLessonId = 0;
@@ -267,6 +278,7 @@ else if (data is not null)
         data = null;
         projection = null;
         baseLessons = [];
+        expandedProjectionWeeks.Clear();
         showEditor = false;
         editingLessonId = 0;
         try
@@ -295,7 +307,18 @@ else if (data is not null)
         WeekDay.Sunday => "Неділя", _ => "—"
     };
 
-    private static string GetWeekName(WeekProperty value) => value == WeekProperty.Numerator ? "Чисельник" : "Знаменник";
+    private void ToggleProjectionWeek(int weekNumber)
+    {
+        if (!expandedProjectionWeeks.Add(weekNumber)) expandedProjectionWeeks.Remove(weekNumber);
+    }
+
+    private static string GetWeekName(WeekProperty value) => value switch
+    {
+        WeekProperty.Numerator => "Чисельник",
+        WeekProperty.Denominator => "Знаменник",
+        WeekProperty.EveryWeek => "Кожний тиждень",
+        _ => "—"
+    };
     private async Task LoadTeacherReport()
     {
         if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача."; return; }
