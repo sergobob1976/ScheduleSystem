@@ -154,6 +154,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
             teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
             teacherSemesterLoads = await Http.GetFromJsonAsync<List<TeacherSemesterLoad>>("api/teachersemesterloads") ?? [];
             await LoadWeeks();
+            if (!string.IsNullOrWhiteSpace(weekStart)) await LoadSchedule();
         }
         catch (Exception)
         {
@@ -186,8 +187,24 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         errorMessage = "";
         successMessage = "";
         await LoadWeeks();
+        if (!string.IsNullOrWhiteSpace(weekStart)) await LoadSchedule();
     }
-    private async Task LoadWeeks() { weeks = semesterId > 0 ? await Http.GetFromJsonAsync<List<RealLessonTransferWeekOption>>($"api/RealLessons/transfer-week-options/semester/{semesterId}") ?? [] : []; weekStart = ""; lessons = []; }
+    private async Task LoadWeeks()
+    {
+        weeks = semesterId > 0
+            ? await Http.GetFromJsonAsync<List<RealLessonTransferWeekOption>>($"api/RealLessons/transfer-week-options/semester/{semesterId}") ?? []
+            : [];
+        weekStart = "";
+        lessons = [];
+
+        var today = DateTime.Today;
+        var currentWeek = weeks.FirstOrDefault(item =>
+            item.ActiveStartDate.Date <= today && item.ActiveEndDate.Date >= today);
+        if (currentWeek is not null)
+        {
+            weekStart = currentWeek.WeekStartDate.ToString("yyyy-MM-dd");
+        }
+    }
     private async Task LoadSchedule()
     {
         errorMessage = "";
