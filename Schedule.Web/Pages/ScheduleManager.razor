@@ -42,7 +42,7 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
     <div class="card border-primary shadow-sm mb-4"><div class="card-header bg-primary text-white">Редагування реального заняття</div><div class="card-body"><div class="row g-3 align-items-end">
         <div class="col-md-3"><label class="form-label fw-bold">Дата</label><input type="date" class="form-control" @bind="editingLesson.LessonDate" @bind:format="yyyy-MM-dd" /></div>
         <div class="col-md-2"><label class="form-label fw-bold">Пара</label><select class="form-select" @bind="editingLesson.LessonPosition">@for (var i=1;i<=8;i++){<option value="@i">@i</option>}</select></div>
-        <div class="col-md-4"><label class="form-label fw-bold">Призначення</label><select class="form-select" @bind="editingLesson.TeachingAssignmentId">@foreach(var item in AvailableAssignments){<option value="@item.Id">@item.GroupDiscipline?.Group?.Name · @item.GroupDiscipline?.Discipline?.Name · @item.Teacher?.Name</option>}</select></div>
+        <div class="col-md-4"><label class="form-label fw-bold">Призначення</label><select class="form-select" @bind="editingLesson.TeachingAssignmentId">@foreach(var item in AvailableAssignments){<option value="@item.Id">@item.GroupDiscipline?.Group?.Name · @item.GroupDiscipline?.Discipline?.Name · @item.Teacher?.Name · @GetLessonTypeName(item.LessonType)</option>}</select></div>
         <div class="col-md-3"><label class="form-label fw-bold">Аудиторія</label><select class="form-select" @bind="editingLesson.ClassRoomId"><option value="">Без аудиторії</option>@foreach(var room in classRooms){<option value="@room.Id">@room.Name</option>}</select></div>
         <div class="col-md-6"><label class="form-label fw-bold">Посилання на конференцію</label><input class="form-control" type="url" placeholder="https://..." @bind="editingLesson.ConferenceLink" /></div>
         <div class="col-md-6"><label class="form-label fw-bold">Посилання на матеріали</label><input class="form-control" type="url" placeholder="https://..." @bind="editingLesson.ResourceLink" /></div>
@@ -51,12 +51,12 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
 }
 
 <div class="card shadow-sm"><div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2"><strong>Заняття вибраного тижня</strong><div class="d-flex flex-wrap gap-2"><span class="badge bg-primary">Усього: @lessons.Count</span><span class="badge bg-secondary">Заплановано: @PlannedLessonCount</span><span class="badge bg-success">Проведено: @CompletedLessonCount</span><span class="badge bg-danger">Скасовано: @CancelledLessonCount</span></div></div>
-<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Дата</th><th>Пара</th><th>Група</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Стан</th><th>Дії</th></tr></thead>
-<tbody>@if (isLoadingSchedule) { <tr><td colspan="8" class="text-center text-muted py-4">Завантаження…</td></tr> }
-else if (lessons.Count == 0) { <tr><td colspan="8" class="text-center text-muted py-4">Занять немає.</td></tr> }
+<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Дата</th><th>Пара</th><th>Група</th><th>Дисципліна</th><th>Тип</th><th>Викладач</th><th>Аудиторія</th><th>Стан</th><th>Дії</th></tr></thead>
+<tbody>@if (isLoadingSchedule) { <tr><td colspan="9" class="text-center text-muted py-4">Завантаження…</td></tr> }
+else if (lessons.Count == 0) { <tr><td colspan="9" class="text-center text-muted py-4">Занять немає.</td></tr> }
 else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM.yyyy")</td><td>@item.LessonPosition</td><td>@item.Group?.Name</td><td>@item.Discipline?.Name
     @if (!string.IsNullOrWhiteSpace(item.ResourceLink)) { <div><a class="small" href="@item.ResourceLink" target="_blank" rel="noopener noreferrer">Матеріали</a></div> }
-</td><td>@item.Teacher?.Name
+</td><td>@GetLessonTypeName(item.LessonType)</td><td>@item.Teacher?.Name
     @if (!string.IsNullOrWhiteSpace(item.ConferenceLink)) { <div><a class="small" href="@item.ConferenceLink" target="_blank" rel="noopener noreferrer">Конференція</a></div> }
 </td><td>@(item.ClassRoom?.Name ?? "—")</td><td>
     <select class="form-select form-select-sm status-select @GetStatusClass(item.Status)" disabled="@isChangingStatus" value="@((int)item.Status)" @onchange="args => ChangeStatus(item, args)">
@@ -341,4 +341,6 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private static async Task<string> ReadMessage(HttpResponseMessage response) { var text = await response.Content.ReadAsStringAsync(); try { using var json = JsonDocument.Parse(text); if (json.RootElement.TryGetProperty("message", out var value)) return value.GetString() ?? "Операцію не виконано."; } catch (JsonException) { } return text; }
     private static string GetStatusName(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "Проведено", RealLessonStatus.Cancelled => "Скасовано", _ => "Заплановано" };
     private static string GetStatusClass(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "border-success text-success", RealLessonStatus.Cancelled => "border-danger text-danger", _ => "border-secondary" };
+    private static string GetLessonTypeName(LessonType value) => value switch
+    { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
 }
