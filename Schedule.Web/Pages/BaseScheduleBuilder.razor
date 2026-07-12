@@ -191,6 +191,7 @@ else if (data is not null)
         try
         {
             semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
+            SelectDefaultSemester();
             groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
             groupDisciplines = await Http.GetFromJsonAsync<List<GroupDiscipline>>("api/groupdisciplines") ?? [];
             disciplines = await Http.GetFromJsonAsync<List<Discipline>>("api/disciplines") ?? [];
@@ -203,6 +204,25 @@ else if (data is not null)
         {
             errorMessage = "Не вдалося завантажити довідкові дані для базового розкладу. Перевірте з’єднання із сервером і оновіть сторінку.";
         }
+    }
+
+    private void SelectDefaultSemester()
+    {
+        var today = DateTime.Today;
+        var semester = semesters
+            .Where(item => item.StartDate.Date <= today && item.EndDate.Date >= today)
+            .OrderBy(item => item.StartDate)
+            .FirstOrDefault()
+            ?? semesters
+                .Where(item => item.StartDate.Date > today)
+                .OrderBy(item => item.StartDate)
+                .FirstOrDefault()
+            ?? semesters
+                .Where(item => item.EndDate.Date < today)
+                .OrderByDescending(item => item.EndDate)
+                .FirstOrDefault();
+
+        semesterId = semester?.Id ?? 0;
     }
 
     private void ChangeSemester()
