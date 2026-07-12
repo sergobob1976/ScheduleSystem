@@ -92,3 +92,19 @@ code {
 .schedule-grid th { white-space: nowrap; }
 .schedule-cell { min-width: 145px; height: 92px; vertical-align: top; background: #fff; }
 .status-select { min-width: 135px; font-weight: 600; }
+.crud-form-column,
+.crud-data-column {
+    width: 100%;
+}
+
+@media (min-width: 992px) {
+    .crud-form-column {
+        flex: 0 0 28.333333%;
+        max-width: 28.333333%;
+    }
+
+    .crud-data-column {
+        flex: 0 0 71.666667%;
+        max-width: 71.666667%;
+    }
+}
