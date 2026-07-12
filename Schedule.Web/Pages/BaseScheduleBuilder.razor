@@ -114,7 +114,7 @@ else if (data is not null)
     </table></div>
 
     <div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Планове навантаження викладача</strong></div><div class="card-body"><div class="row g-3 align-items-end">
-        <div class="col-md-8"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="reportTeacherId"><option value="0">Оберіть викладача</option>@foreach(var teacher in teachers){<option value="@teacher.Id">@teacher.Name</option>}</select></div>
+        <div class="col-md-8"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="reportTeacherId" @bind:after="ClearTeacherReport"><option value="0">Оберіть викладача</option>@foreach(var teacher in teachers){<option value="@teacher.Id">@teacher.Name</option>}</select></div>
         <div class="col-md-4"><button class="btn btn-outline-primary w-100" disabled="@isLoadingTeacherReport" @onclick="LoadTeacherReport">@(isLoadingTeacherReport ? "Завантаження…" : "Показати звіт")</button></div>
     </div></div>
     @if (teacherReport is not null) { <div class="card-body border-top"><div class="row text-center g-3 mb-3"><div class="col"><div class="text-muted small">План</div><strong>@teacherReport.PlannedHours</strong></div><div class="col"><div class="text-muted small">Розподілено</div><strong>@teacherReport.AssignedHours</strong></div><div class="col"><div class="text-muted small">За розкладом</div><strong>@teacherReport.ScheduledHours</strong></div><div class="col"><div class="text-muted small">Залишок</div><strong>@teacherReport.RemainingScheduledHours</strong></div><div class="col"><div class="text-muted small">Перевищення</div><strong class="@(teacherReport.IsScheduleExceeded ? "text-danger" : "text-success")">@teacherReport.ExceededScheduledHours</strong></div></div>
@@ -314,6 +314,12 @@ else if (data is not null)
         {
             isLoadingTeacherReport = false;
         }
+    }
+    private void ClearTeacherReport()
+    {
+        teacherReport = null;
+        errorMessage = "";
+        successMessage = "";
     }
     private async Task RefreshTeacherReport() { if (teacherReport is not null) await LoadTeacherReport(); }
     private static string GetLessonTypeName(LessonType value) => value switch
