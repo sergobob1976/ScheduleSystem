@@ -9,13 +9,14 @@
 <p class="text-muted">Перенесення базового шаблону календарними тижнями та керування фактичними заняттями.</p>
 
 <div class="card shadow-sm mb-4"><div class="card-body"><div class="row g-3 align-items-end">
-    <div class="col-md-4"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="LoadWeeks">
+    <div class="col-md-3"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="LoadWeeks">
         <option value="0">Оберіть семестр</option>@foreach (var item in semesters) { <option value="@item.Id">@item.Name</option> }
     </select></div>
-    <div class="col-md-5"><label class="form-label fw-bold">Календарний тиждень</label><select class="form-select" @bind="weekStart" @bind:after="LoadSchedule">
+    <div class="col-md-4"><label class="form-label fw-bold">Календарний тиждень</label><select class="form-select" @bind="weekStart" @bind:after="LoadSchedule">
         <option value="">Оберіть тиждень</option>@foreach (var item in weeks) { <option value="@item.WeekStartDate.ToString("yyyy-MM-dd")">@item.ActiveStartDate.ToString("dd.MM")–@item.ActiveEndDate.ToString("dd.MM.yyyy") · @item.RecommendedWeekPropertyName @(item.IsTransferred ? "· перенесено" : "")</option> }
     </select></div>
-    <div class="col-md-3"><button class="btn btn-primary w-100" disabled="@(SelectedWeek is null || SelectedWeek.IsTransferred)" @onclick="TransferWeek">Перенести тиждень</button></div>
+    <div class="col-md-3"><label class="form-label fw-bold">Фільтр групи</label><select class="form-select" @bind="scheduleGroupId" @bind:after="LoadSchedule"><option value="0">Усі групи</option>@foreach(var group in groups){<option value="@group.Id">@group.Name</option>}</select></div>
+    <div class="col-md-2"><button class="btn btn-primary w-100" disabled="@(SelectedWeek is null || SelectedWeek.IsTransferred)" @onclick="TransferWeek">Перенести</button></div>
 </div></div></div>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
@@ -90,6 +91,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private DateTime teacherReportDate = DateTime.Today;
     private RealLesson? editingLesson;
     private int semesterId;
+    private int scheduleGroupId;
     private string weekStart = "";
     private WeekProperty transferProperty = WeekProperty.Numerator;
     private string errorMessage = "";
@@ -99,7 +101,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
 
     protected override async Task OnInitializedAsync() { semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? []; assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? []; classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? []; groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? []; teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? []; }
     private async Task LoadWeeks() { weeks = semesterId > 0 ? await Http.GetFromJsonAsync<List<RealLessonTransferWeekOption>>($"api/RealLessons/transfer-week-options/semester/{semesterId}") ?? [] : []; weekStart = ""; lessons = []; }
-    private async Task LoadSchedule() { errorMessage = ""; successMessage = ""; var week = SelectedWeek; if (week is null) { lessons = []; return; } transferProperty = week.RecommendedWeekProperty; lessons = await Http.GetFromJsonAsync<List<RealLesson>>($"api/RealLessons/semester/{semesterId}/week/{week.WeekStartDate:yyyy-MM-dd}") ?? []; }
+    private async Task LoadSchedule() { errorMessage = ""; successMessage = ""; var week = SelectedWeek; if (week is null) { lessons = []; return; } transferProperty = week.RecommendedWeekProperty; var groupQuery = scheduleGroupId > 0 ? $"?groupId={scheduleGroupId}" : ""; lessons = await Http.GetFromJsonAsync<List<RealLesson>>($"api/RealLessons/semester/{semesterId}/week/{week.WeekStartDate:yyyy-MM-dd}{groupQuery}") ?? []; }
     private async Task TransferWeek()
     {
         var week = SelectedWeek; if (week is null) return;
