@@ -15,16 +15,8 @@
                     </NavLink>
                 </li>
 
-                <li class="nav-item mb-2">
-                    <button type="button" class="menu-section-button" @onclick="() => schedulesExpanded = !schedulesExpanded">
-                        <span>Розклади</span><span aria-hidden="true">@(schedulesExpanded ? "▾" : "▸")</span>
-                    </button>
-                </li>
-                @if (schedulesExpanded)
-                {
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="base-schedule">🗓️ Базовий розклад</NavLink></li>
-                    <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white" href="schedule">📅 Реальний розклад</NavLink></li>
-                }
+                <li class="nav-item mb-1"><NavLink class="nav-link text-white" href="base-schedule">🗓️ Базовий розклад</NavLink></li>
+                <li class="nav-item mb-2"><NavLink class="nav-link text-white" href="schedule">📅 Реальний розклад</NavLink></li>
 
                 <li class="nav-item mb-2">
                     <button type="button" class="menu-section-button" @onclick="() => referencesExpanded = !referencesExpanded">
@@ -33,13 +25,13 @@
                 </li>
                 @if (referencesExpanded)
                 {
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="semesters">📆 Семестри</NavLink></li>
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="classrooms">🏫 Аудиторії</NavLink></li>
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="groups">🎒 Групи</NavLink></li>
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="specialties">🎓 Спеціальності</NavLink></li>
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="group-specialties">🔗 Групи та спеціальності</NavLink></li>
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="disciplines">📚 Дисципліни</NavLink></li>
-                    <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white" href="teachers">👨‍🏫 Викладачі</NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="semesters"><span class="menu-icon">📆</span><span class="menu-label">Семестри</span></NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="classrooms"><span class="menu-icon">🏫</span><span class="menu-label">Аудиторії</span></NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="groups"><span class="menu-icon">🎒</span><span class="menu-label">Групи</span></NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="specialties"><span class="menu-icon">🎓</span><span class="menu-label">Спеціальності</span></NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="group-specialties"><span class="menu-icon">🔗</span><span class="menu-label">Групи та спеціальності</span></NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="disciplines"><span class="menu-icon">📚</span><span class="menu-label">Дисципліни</span></NavLink></li>
+                    <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white menu-child-link" href="teachers"><span class="menu-icon">👨‍🏫</span><span class="menu-label">Викладачі</span></NavLink></li>
                 }
 
                 <li class="nav-item mb-2">
@@ -49,11 +41,11 @@
                 </li>
                 @if (workloadExpanded)
                 {
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="group-disciplines">📖 Навчальні плани груп</NavLink></li>
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="teacher-semester-loads">📊 Навантаження викладачів</NavLink></li>
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="teacher-discipline-loads">📚 Навантаження за дисциплінами</NavLink></li>
-                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white" href="teaching-assignments">🧑‍🏫 Призначення викладачів</NavLink></li>
-                    <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white" href="workload-overview">📈 Контроль навантаження</NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="group-disciplines"><span class="menu-icon">📖</span><span class="menu-label">Навчальні плани груп</span></NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="teacher-semester-loads"><span class="menu-icon">📊</span><span class="menu-label">Навантаження викладачів</span></NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="teacher-discipline-loads"><span class="menu-icon">📚</span><span class="menu-label">Навантаження за дисциплінами</span></NavLink></li>
+                    <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="teaching-assignments"><span class="menu-icon">🧑‍🏫</span><span class="menu-label">Призначення викладачів</span></NavLink></li>
+                    <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white menu-child-link" href="workload-overview"><span class="menu-icon">📈</span><span class="menu-label">Контроль навантаження</span></NavLink></li>
                 }
             </ul>
         </div>
@@ -65,14 +57,12 @@
 </div>
 
 @code {
-    private bool schedulesExpanded;
     private bool referencesExpanded;
     private bool workloadExpanded;
 
     protected override void OnInitialized()
     {
         var path = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
-        schedulesExpanded = path is "base-schedule" or "schedule";
         referencesExpanded = path is "semesters" or "classrooms" or "groups" or "specialties" or "group-specialties" or "disciplines" or "teachers";
         workloadExpanded = path is "group-disciplines" or "teacher-semester-loads" or "teacher-discipline-loads" or "teaching-assignments" or "workload-overview";
     }
@@ -112,6 +102,21 @@
     .menu-section-button:hover {
         background-color: #343a40;
         color: white;
+    }
+
+    .menu-child-link {
+        align-items: flex-start;
+        display: flex;
+    }
+
+    .menu-icon {
+        flex: 0 0 1.75rem;
+        line-height: 1.5;
+    }
+
+    .menu-label {
+        line-height: 1.5;
+        min-width: 0;
     }
 
     @@media (min-width: 768px) {
