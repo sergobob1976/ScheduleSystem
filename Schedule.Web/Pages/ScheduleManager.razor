@@ -53,7 +53,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
 </td><td>@item.Teacher?.Name
     @if (!string.IsNullOrWhiteSpace(item.ConferenceLink)) { <div><a class="small" href="@item.ConferenceLink" target="_blank" rel="noopener noreferrer">Конференція</a></div> }
 </td><td>@(item.ClassRoom?.Name ?? "—")</td><td>
-    <select class="form-select form-select-sm status-select @GetStatusClass(item.Status)" value="@((int)item.Status)" @onchange="args => ChangeStatus(item, args)">
+    <select class="form-select form-select-sm status-select @GetStatusClass(item.Status)" disabled="@isChangingStatus" value="@((int)item.Status)" @onchange="args => ChangeStatus(item, args)">
         <option value="0">Заплановано</option><option value="1">Проведено</option><option value="2">Скасовано</option>
     </select>
 </td><td><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary" @onclick="() => EditLesson(item)">Редагувати</button><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLesson(item.Id)">Видалити</button></div></td></tr> } }</tbody></table></div></div>
@@ -95,6 +95,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private int scheduleGroupId;
     private bool isTransferring;
     private bool isSavingLesson;
+    private bool isChangingStatus;
     private string weekStart = "";
     private WeekProperty transferProperty = WeekProperty.Numerator;
     private string errorMessage = "";
@@ -155,9 +156,25 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     {
         if (!int.TryParse(args.Value?.ToString(), out var value) || !Enum.IsDefined(typeof(RealLessonStatus), value)) return;
         var status = (RealLessonStatus)value;
-        var response = await Http.PatchAsJsonAsync($"api/RealLessons/{lesson.Id}/status", new UpdateRealLessonStatusRequest { Status = status });
-        if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); await LoadSchedule(); return; }
-        lesson.Status = status; errorMessage = ""; await RefreshLoadedReports(); successMessage = $"Стан заняття змінено на «{GetStatusName(status)}».";
+        isChangingStatus = true;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var response = await Http.PatchAsJsonAsync($"api/RealLessons/{lesson.Id}/status", new UpdateRealLessonStatusRequest { Status = status });
+            if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); await LoadSchedule(); return; }
+            lesson.Status = status;
+            await RefreshLoadedReports();
+            successMessage = $"Стан заняття змінено на «{GetStatusName(status)}».";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося змінити стан заняття. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            isChangingStatus = false;
+        }
     }
     private void EditLesson(RealLesson source) => editingLesson = new RealLesson { Id=source.Id, TeachingAssignmentId=source.TeachingAssignmentId, GroupId=source.GroupId, TeacherId=source.TeacherId, DisciplineId=source.DisciplineId, ClassRoomId=source.ClassRoomId, SemesterId=source.SemesterId, LessonDate=source.LessonDate, LessonPosition=source.LessonPosition, WeekDay=source.WeekDay, WeekProperty=source.WeekProperty, LessonType=source.LessonType, Status=source.Status, ConferenceLink=source.ConferenceLink, ResourceLink=source.ResourceLink };
     private async Task SaveLesson()
