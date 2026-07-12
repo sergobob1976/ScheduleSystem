@@ -10,7 +10,7 @@
 <p class="text-muted">Перенесення базового шаблону календарними тижнями та керування фактичними заняттями.</p>
 
 <div class="card shadow-sm mb-4"><div class="card-body"><div class="row g-3 align-items-end">
-    <div class="col-md-3"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="LoadWeeks">
+    <div class="col-md-3"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="ChangeSemester">
         <option value="0">Оберіть семестр</option>@foreach (var item in semesters) { <option value="@item.Id">@item.Name</option> }
     </select></div>
     <div class="col-md-4"><label class="form-label fw-bold">Календарний тиждень</label><select class="form-select" @bind="weekStart" @bind:after="LoadSchedule">
@@ -101,6 +101,18 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private IEnumerable<TeachingAssignment> AvailableAssignments => assignments.Where(x => x.GroupDiscipline?.SemesterId == semesterId);
 
     protected override async Task OnInitializedAsync() { semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? []; assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? []; classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? []; groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? []; teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? []; }
+    private async Task ChangeSemester()
+    {
+        scheduleGroupId = 0;
+        reportGroupId = 0;
+        reportTeacherId = 0;
+        hoursReport = null;
+        teacherHoursReport = null;
+        editingLesson = null;
+        errorMessage = "";
+        successMessage = "";
+        await LoadWeeks();
+    }
     private async Task LoadWeeks() { weeks = semesterId > 0 ? await Http.GetFromJsonAsync<List<RealLessonTransferWeekOption>>($"api/RealLessons/transfer-week-options/semester/{semesterId}") ?? [] : []; weekStart = ""; lessons = []; }
     private async Task LoadSchedule() { errorMessage = ""; successMessage = ""; var week = SelectedWeek; if (week is null) { lessons = []; return; } transferProperty = week.RecommendedWeekProperty; var groupQuery = scheduleGroupId > 0 ? $"?groupId={scheduleGroupId}" : ""; lessons = await Http.GetFromJsonAsync<List<RealLesson>>($"api/RealLessons/semester/{semesterId}/week/{week.WeekStartDate:yyyy-MM-dd}{groupQuery}") ?? []; }
     private async Task TransferWeek()
