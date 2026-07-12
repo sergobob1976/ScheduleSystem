@@ -47,6 +47,16 @@
                     <li class="nav-item mb-1 ms-2"><NavLink class="nav-link text-white menu-child-link" href="teaching-assignments"><span class="menu-icon">🧑‍🏫</span><span class="menu-label">Призначення викладачів</span></NavLink></li>
                     <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white menu-child-link" href="workload-overview"><span class="menu-icon">📈</span><span class="menu-label">Контроль навантаження</span></NavLink></li>
                 }
+
+                <li class="nav-item mb-2">
+                    <button type="button" class="menu-section-button" @onclick="() => reportsExpanded = !reportsExpanded">
+                        <span>Звіти</span><span aria-hidden="true">@(reportsExpanded ? "▾" : "▸")</span>
+                    </button>
+                </li>
+                @if (reportsExpanded)
+                {
+                    <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white menu-child-link" href="reports/day-schedule"><span class="menu-icon">📝</span><span class="menu-label">Розклад на день</span></NavLink></li>
+                }
             </ul>
         </div>
 
@@ -59,12 +69,14 @@
 @code {
     private bool referencesExpanded;
     private bool workloadExpanded;
+    private bool reportsExpanded;
 
     protected override void OnInitialized()
     {
         var path = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
         referencesExpanded = path is "semesters" or "classrooms" or "groups" or "specialties" or "group-specialties" or "disciplines" or "teachers";
         workloadExpanded = path is "group-disciplines" or "teacher-semester-loads" or "teacher-discipline-loads" or "teaching-assignments" or "workload-overview";
+        reportsExpanded = path is "reports/day-schedule";
     }
 }
 

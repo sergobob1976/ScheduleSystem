@@ -2,6 +2,7 @@ using System.Text;
 using Schedule.Core.Interfaces;
 using Schedule.Infrastructure;
 using Schedule.Infrastructure.Repositories;
+using Schedule.Api.Services;
 
 Console.InputEncoding = Encoding.UTF8;
 Console.OutputEncoding = Encoding.UTF8;
@@ -22,6 +23,7 @@ builder.Services.AddCors(options =>
 builder.Services.AddControllers();
 
 builder.Services.AddTransient<DatabaseInitializer>();
+builder.Services.AddSingleton<DayScheduleDocxGenerator>();
 
 builder.Services.AddScoped<
     IGroupRepository,

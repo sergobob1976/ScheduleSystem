@@ -1,0 +1,114 @@
+@page "/reports/day-schedule"
+@using Schedule.Core.DTOs
+@using Schedule.Core.Enums
+@using Schedule.Core.Models
+@inject HttpClient Http
+
+<h1 class="h3 mb-3">Розклад на день</h1>
+<p class="text-muted">Перегляд і формування Word-файлу реального розкладу на вибрану дату для всіх груп.</p>
+
+<div class="card shadow-sm mb-4"><div class="card-body"><div class="row g-3 align-items-end">
+    <div class="col-md-5"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="ChangeSemester"><option value="0">Оберіть семестр</option>@foreach(var item in semesters){<option value="@item.Id">@item.Name</option>}</select></div>
+    <div class="col-md-4"><label class="form-label fw-bold">Дата</label><input type="date" class="form-control" min="@MinDate" max="@MaxDate" @bind="scheduleDate" @bind:format="yyyy-MM-dd" @bind:after="ClearReport" /></div>
+    <div class="col-md-3"><button class="btn btn-primary w-100" disabled="@isLoading" @onclick="LoadReport">@(isLoading ? "Завантаження…" : "Показати")</button></div>
+</div></div></div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
+
+@if (report is not null)
+{
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div><h2 class="h5 mb-1">Розклад на @report.ScheduleDate.ToString("dd.MM.yyyy")</h2><div class="text-muted">@report.DayName · @report.SemesterName</div></div>
+        <a class="btn btn-success" href="@DownloadUrl">Завантажити Word (.docx)</a>
+    </div>
+
+    <div class="card shadow-sm"><div class="table-responsive"><table class="table table-bordered align-middle mb-0">
+        <thead class="table-light"><tr><th style="width: 6rem">Пара</th><th>Дисципліна</th><th>Викладач / аудиторія</th></tr></thead><tbody>
+        @foreach (var group in report.Groups)
+        {
+            <tr class="table-primary"><th colspan="3" class="text-center">Група @group.GroupName</th></tr>
+            @if (group.Lessons.Count == 0)
+            {
+                <tr><td></td><td colspan="2" class="text-muted">Занять немає</td></tr>
+            }
+            else
+            {
+                @foreach (var lesson in group.Lessons)
+                {
+                    <tr class="@(lesson.Status == RealLessonStatus.Cancelled ? "table-danger" : "")">
+                        <td class="text-center fw-bold">@lesson.LessonPosition</td>
+                        <td><div class="fw-semibold">@lesson.DisciplineName</div><div class="small text-muted">@GetLessonTypeName(lesson.LessonType)</div>@if(!string.IsNullOrWhiteSpace(lesson.ResourceLink)){<a class="small" href="@lesson.ResourceLink" target="_blank" rel="noopener noreferrer">Матеріали</a>}</td>
+                        <td><div>@lesson.TeacherName</div>@if(!string.IsNullOrWhiteSpace(lesson.ClassRoomName)){<div class="small text-muted">Аудиторія: @lesson.ClassRoomName</div>}@if(!string.IsNullOrWhiteSpace(lesson.ConferenceLink)){<a class="small" href="@lesson.ConferenceLink" target="_blank" rel="noopener noreferrer">Конференція</a>}@if(lesson.Status == RealLessonStatus.Cancelled){<div class="text-danger fw-bold small">Скасовано</div>}</td>
+                    </tr>
+                }
+            }
+        }
+        </tbody></table></div></div>
+}
+
+@code {
+    private List<Semester> semesters = [];
+    private int semesterId;
+    private DateTime scheduleDate = DateTime.Today;
+    private DayScheduleReportResponse? report;
+    private bool isLoading;
+    private string errorMessage = "";
+    private Semester? SelectedSemester => semesters.FirstOrDefault(x => x.Id == semesterId);
+    private string MinDate => SelectedSemester?.StartDate.ToString("yyyy-MM-dd") ?? "";
+    private string MaxDate => SelectedSemester?.EndDate.ToString("yyyy-MM-dd") ?? "";
+    private string DownloadUrl => new Uri(Http.BaseAddress!, $"api/DayScheduleReports/semester/{semesterId}/docx?scheduleDate={scheduleDate:yyyy-MM-dd}").ToString();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
+            SelectDefaultSemester();
+            SetDefaultDate();
+            if (semesterId > 0) await LoadReport();
+        }
+        catch (Exception)
+        {
+            errorMessage = "Не вдалося завантажити дані для звіту. Перевірте з’єднання із сервером і оновіть сторінку.";
+        }
+    }
+
+    private void SelectDefaultSemester()
+    {
+        var today = DateTime.Today;
+        var semester = semesters.FirstOrDefault(x => x.StartDate.Date <= today && x.EndDate.Date >= today)
+            ?? semesters.Where(x => x.StartDate.Date > today).OrderBy(x => x.StartDate).FirstOrDefault()
+            ?? semesters.OrderByDescending(x => x.EndDate).FirstOrDefault();
+        semesterId = semester?.Id ?? 0;
+    }
+
+    private void SetDefaultDate()
+    {
+        var semester = SelectedSemester;
+        if (semester is null) return;
+        scheduleDate = DateTime.Today < semester.StartDate.Date ? semester.StartDate.Date
+            : DateTime.Today > semester.EndDate.Date ? semester.EndDate.Date
+            : DateTime.Today;
+    }
+
+    private void ChangeSemester() { SetDefaultDate(); ClearReport(); }
+    private void ClearReport() { report = null; errorMessage = ""; }
+
+    private async Task LoadReport()
+    {
+        if (semesterId <= 0) { errorMessage = "Оберіть семестр."; return; }
+        isLoading = true; errorMessage = ""; report = null;
+        try
+        {
+            report = await Http.GetFromJsonAsync<DayScheduleReportResponse>($"api/DayScheduleReports/semester/{semesterId}?scheduleDate={scheduleDate:yyyy-MM-dd}");
+        }
+        catch (Exception)
+        {
+            errorMessage = "Не вдалося сформувати розклад на день. Перевірте дату та з’єднання із сервером.";
+        }
+        finally { isLoading = false; }
+    }
+
+    private static string GetLessonTypeName(LessonType value) => value switch
+    { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
+}
