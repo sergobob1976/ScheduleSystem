@@ -41,7 +41,7 @@ else if (data is not null)
                 <div class="col-md-3"><label class="form-label fw-bold">Повторення</label><select class="form-select" @bind="editorWeekProperty">
                     <option value="@selectedWeek">@GetWeekName(selectedWeek)</option><option value="@WeekProperty.EveryWeek">Кожний тиждень</option>
                 </select></div>
-                <div class="col-12 d-flex gap-2"><button class="btn btn-primary" @onclick="SaveLesson">@(editingLessonId > 0 ? "Зберегти" : "Створити заняття")</button><button class="btn btn-outline-secondary" @onclick="CloseEditor">Скасувати</button></div>
+                <div class="col-12 d-flex gap-2"><button class="btn btn-primary" disabled="@isSaving" @onclick="SaveLesson">@(isSaving ? "Збереження…" : editingLessonId > 0 ? "Зберегти" : "Створити заняття")</button><button class="btn btn-outline-secondary" disabled="@isSaving" @onclick="CloseEditor">Скасувати</button></div>
             </div></div>
         </div>
     }
@@ -137,6 +137,7 @@ else if (data is not null)
     private int semesterId;
     private int groupId;
     private bool isLoading;
+    private bool isSaving;
     private string errorMessage = "";
     private string successMessage = "";
     private bool showEditor;
@@ -191,12 +192,26 @@ else if (data is not null)
         var lesson = new BaseLesson { Id = editingLessonId, TeachingAssignmentId = assignmentId, ClassRoomId = classRoomId > 0 ? classRoomId : null,
             LessonPosition = editorPosition, WeekDay = editorDay, WeekProperty = editorWeekProperty, LessonType = LessonType.Lecture,
             GroupId = 0, TeacherId = 0, DisciplineId = 0, SemesterId = 0 };
-        var response = editingLessonId > 0
-            ? await Http.PutAsJsonAsync($"api/BaseLessons/{editingLessonId}", lesson)
-            : await Http.PostAsJsonAsync("api/BaseLessons", lesson);
-        if (!response.IsSuccessStatusCode) { errorMessage = await ReadApiMessage(response); return; }
-        var updated = editingLessonId > 0; showEditor = false; editingLessonId = 0; await LoadBuilder(); await RefreshTeacherReport();
-        successMessage = updated ? "Заняття успішно оновлено." : "Заняття успішно створено.";
+        isSaving = true;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var response = editingLessonId > 0
+                ? await Http.PutAsJsonAsync($"api/BaseLessons/{editingLessonId}", lesson)
+                : await Http.PostAsJsonAsync("api/BaseLessons", lesson);
+            if (!response.IsSuccessStatusCode) { errorMessage = await ReadApiMessage(response); return; }
+            var updated = editingLessonId > 0; showEditor = false; editingLessonId = 0; await LoadBuilder(); await RefreshTeacherReport();
+            successMessage = updated ? "Заняття успішно оновлено." : "Заняття успішно створено.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося зберегти заняття. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private async Task DeleteLesson(int id)
