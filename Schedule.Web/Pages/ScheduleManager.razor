@@ -65,6 +65,15 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
 @foreach(var item in hoursReport.Disciplines){<tr><td class="fw-semibold">@item.DisciplineName</td><td>@item.PlannedHours</td><td class="text-success">@item.CompletedHours</td><td>@item.PlannedFutureHours</td><td class="text-warning">@item.UnconfirmedPastHours</td><td class="text-danger">@item.CancelledHours</td><td class="fw-bold">@item.RemainingHours</td></tr>}
 </tbody></table></div> }</div>
 
+<div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Вичитка годин викладача</strong></div><div class="card-body"><div class="row g-3 align-items-end">
+    <div class="col-md-5"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="reportTeacherId"><option value="0">Оберіть викладача</option>@foreach(var teacher in teachers){<option value="@teacher.Id">@teacher.Name</option>}</select></div>
+    <div class="col-md-4"><label class="form-label fw-bold">Станом на дату</label><input type="date" class="form-control" @bind="teacherReportDate" @bind:format="yyyy-MM-dd" /></div>
+    <div class="col-md-3"><button class="btn btn-outline-primary w-100" @onclick="LoadTeacherHoursReport">Показати звіт</button></div>
+</div></div>
+@if (teacherHoursReport is not null) { <div class="table-responsive"><table class="table table-sm align-middle mb-0"><thead class="table-light"><tr><th>Дисципліна</th><th>План</th><th>Проведено</th><th>Майбутні</th><th>Не підтверджено</th><th>Скасовано</th><th>Залишок</th></tr></thead><tbody>
+@foreach(var item in teacherHoursReport.Disciplines){<tr><td class="fw-semibold">@item.DisciplineName</td><td>@item.PlannedHours</td><td class="text-success">@item.CompletedHours</td><td>@item.PlannedFutureHours</td><td class="text-warning">@item.UnconfirmedPastHours</td><td class="text-danger">@item.CancelledHours</td><td class="fw-bold">@item.RemainingHours</td></tr>}
+</tbody></table></div> }</div>
+
 @code {
     private List<Semester> semesters = [];
     private List<RealLessonTransferWeekOption> weeks = [];
@@ -72,9 +81,13 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private List<TeachingAssignment> assignments = [];
     private List<ClassRoom> classRooms = [];
     private List<Group> groups = [];
+    private List<Teacher> teachers = [];
     private RealLessonHoursReportResponse? hoursReport;
     private int reportGroupId;
     private DateTime reportDate = DateTime.Today;
+    private TeacherLessonHoursReportResponse? teacherHoursReport;
+    private int reportTeacherId;
+    private DateTime teacherReportDate = DateTime.Today;
     private RealLesson? editingLesson;
     private int semesterId;
     private string weekStart = "";
@@ -84,7 +97,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private RealLessonTransferWeekOption? SelectedWeek => weeks.FirstOrDefault(x => x.WeekStartDate.ToString("yyyy-MM-dd") == weekStart);
     private IEnumerable<TeachingAssignment> AvailableAssignments => assignments.Where(x => x.GroupDiscipline?.SemesterId == semesterId);
 
-    protected override async Task OnInitializedAsync() { semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? []; assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? []; classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? []; groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? []; }
+    protected override async Task OnInitializedAsync() { semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? []; assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? []; classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? []; groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? []; teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? []; }
     private async Task LoadWeeks() { weeks = semesterId > 0 ? await Http.GetFromJsonAsync<List<RealLessonTransferWeekOption>>($"api/RealLessons/transfer-week-options/semester/{semesterId}") ?? [] : []; weekStart = ""; lessons = []; }
     private async Task LoadSchedule() { errorMessage = ""; successMessage = ""; var week = SelectedWeek; if (week is null) { lessons = []; return; } transferProperty = week.RecommendedWeekProperty; lessons = await Http.GetFromJsonAsync<List<RealLesson>>($"api/RealLessons/semester/{semesterId}/week/{week.WeekStartDate:yyyy-MM-dd}") ?? []; }
     private async Task TransferWeek()
@@ -106,6 +119,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private async Task SaveLesson() { if (editingLesson is null) return; var response = await Http.PutAsJsonAsync($"api/RealLessons/{editingLesson.Id}", editingLesson); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } editingLesson = null; await LoadSchedule(); successMessage = "Реальне заняття успішно оновлено."; }
     private async Task DeleteLesson(int id) { errorMessage = ""; successMessage = ""; var response = await Http.DeleteAsync($"api/RealLessons/{id}"); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } if (editingLesson?.Id == id) editingLesson = null; await LoadSchedule(); successMessage = "Реальне заняття успішно видалено."; if (hoursReport is not null) await LoadHoursReport(); }
     private async Task LoadHoursReport() { if (semesterId <= 0 || reportGroupId <= 0) { errorMessage = "Оберіть семестр і групу для звіту."; return; } errorMessage = ""; hoursReport = await Http.GetFromJsonAsync<RealLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/group/{reportGroupId}/hours?reportDate={reportDate:yyyy-MM-dd}"); }
+    private async Task LoadTeacherHoursReport() { if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача для звіту."; return; } errorMessage = ""; teacherHoursReport = await Http.GetFromJsonAsync<TeacherLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/teacher/{reportTeacherId}/hours?reportDate={teacherReportDate:yyyy-MM-dd}"); }
     private static async Task<string> ReadMessage(HttpResponseMessage response) { var text = await response.Content.ReadAsStringAsync(); try { using var json = JsonDocument.Parse(text); if (json.RootElement.TryGetProperty("message", out var value)) return value.GetString() ?? "Операцію не виконано."; } catch (JsonException) { } return text; }
     private static string GetStatusName(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "Проведено", RealLessonStatus.Cancelled => "Скасовано", _ => "Заплановано" };
     private static string GetStatusClass(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "border-success text-success", RealLessonStatus.Cancelled => "border-danger text-danger", _ => "border-secondary" };
