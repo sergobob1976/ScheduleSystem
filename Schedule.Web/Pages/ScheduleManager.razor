@@ -106,9 +106,23 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private async Task TransferWeek()
     {
         var week = SelectedWeek; if (week is null) return;
+        var weekPropertyName = transferProperty == WeekProperty.Numerator
+            ? "Чисельник"
+            : "Знаменник";
+        var confirmed = await JS.InvokeAsync<bool>(
+            "confirm",
+            $"Перенести весь тиждень {week.ActiveStartDate:dd.MM.yyyy}–{week.ActiveEndDate:dd.MM.yyyy} ({weekPropertyName}) до реального розкладу?");
+        if (!confirmed) return;
+
+        errorMessage = "";
+        successMessage = "";
         var response = await Http.PostAsJsonAsync("api/RealLessons/transfer-week", new TransferRealLessonWeekRequest { SemesterId = semesterId, WeekStartDate = week.WeekStartDate, WeekProperty = transferProperty });
         if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; }
-        await LoadWeeks(); weekStart = week.WeekStartDate.ToString("yyyy-MM-dd"); await LoadSchedule(); successMessage = "Тиждень успішно перенесено до реального розкладу.";
+        var result = await response.Content.ReadFromJsonAsync<TransferRealLessonWeekResponse>();
+        await LoadWeeks(); weekStart = week.WeekStartDate.ToString("yyyy-MM-dd"); await LoadSchedule();
+        successMessage = result is null
+            ? "Тиждень успішно перенесено до реального розкладу."
+            : $"Тиждень успішно перенесено. Створено занять: {result.CreatedLessonCount}.";
     }
     private async Task ChangeStatus(RealLesson lesson, ChangeEventArgs args)
     {
