@@ -56,7 +56,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     <select class="form-select form-select-sm status-select @GetStatusClass(item.Status)" disabled="@isChangingStatus" value="@((int)item.Status)" @onchange="args => ChangeStatus(item, args)">
         <option value="0">Заплановано</option><option value="1">Проведено</option><option value="2">Скасовано</option>
     </select>
-</td><td><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary" @onclick="() => EditLesson(item)">Редагувати</button><button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteLesson(item.Id)">Видалити</button></div></td></tr> } }</tbody></table></div></div>
+</td><td><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary" disabled="@(deletingLessonId > 0)" @onclick="() => EditLesson(item)">Редагувати</button><button class="btn btn-sm btn-outline-danger" disabled="@(deletingLessonId > 0)" @onclick="() => DeleteLesson(item.Id)">@(deletingLessonId == item.Id ? "Видалення…" : "Видалити")</button></div></td></tr> } }</tbody></table></div></div>
 
 <div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Фактична вичитка годин</strong></div><div class="card-body"><div class="row g-3 align-items-end">
     <div class="col-md-5"><label class="form-label fw-bold">Група</label><select class="form-select" @bind="reportGroupId"><option value="0">Оберіть групу</option>@foreach(var group in groups){<option value="@group.Id">@group.Name</option>}</select></div>
@@ -96,6 +96,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private bool isTransferring;
     private bool isSavingLesson;
     private bool isChangingStatus;
+    private int deletingLessonId;
     private string weekStart = "";
     private WeekProperty transferProperty = WeekProperty.Numerator;
     private string errorMessage = "";
@@ -201,7 +202,30 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
             isSavingLesson = false;
         }
     }
-    private async Task DeleteLesson(int id) { if (!await JS.InvokeAsync<bool>("confirm", "Видалити це заняття з реального розкладу?")) return; errorMessage = ""; successMessage = ""; var response = await Http.DeleteAsync($"api/RealLessons/{id}"); if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; } if (editingLesson?.Id == id) editingLesson = null; await LoadSchedule(); await RefreshLoadedReports(); successMessage = "Реальне заняття успішно видалено."; }
+    private async Task DeleteLesson(int id)
+    {
+        if (!await JS.InvokeAsync<bool>("confirm", "Видалити це заняття з реального розкладу?")) return;
+        deletingLessonId = id;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var response = await Http.DeleteAsync($"api/RealLessons/{id}");
+            if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; }
+            if (editingLesson?.Id == id) editingLesson = null;
+            await LoadSchedule();
+            await RefreshLoadedReports();
+            successMessage = "Реальне заняття успішно видалено.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося видалити заняття. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            deletingLessonId = 0;
+        }
+    }
     private async Task LoadHoursReport() { if (semesterId <= 0 || reportGroupId <= 0) { errorMessage = "Оберіть семестр і групу для звіту."; return; } errorMessage = ""; hoursReport = await Http.GetFromJsonAsync<RealLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/group/{reportGroupId}/hours?reportDate={reportDate:yyyy-MM-dd}"); }
     private async Task LoadTeacherHoursReport() { if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача для звіту."; return; } errorMessage = ""; teacherHoursReport = await Http.GetFromJsonAsync<TeacherLessonHoursReportResponse>($"api/RealLessonReports/semester/{semesterId}/teacher/{reportTeacherId}/hours?reportDate={teacherReportDate:yyyy-MM-dd}"); }
     private async Task RefreshLoadedReports()
