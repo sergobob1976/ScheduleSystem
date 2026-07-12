@@ -34,7 +34,7 @@ else if (data is not null)
             <div class="card-body"><div class="row g-3 align-items-end">
                 <div class="col-md-6"><label class="form-label fw-bold">Призначення викладача</label>
                     <select class="form-select" @bind="assignmentId"><option value="0">Оберіть дисципліну та викладача</option>
-                        @foreach (var item in AvailableAssignments) { <option value="@item.Id">@item.GroupDiscipline?.Discipline?.Name — @item.Teacher?.Name (@GetLessonTypeName(item.LessonType), @item.AssignedHours год.)</option> }
+                        @foreach (var item in AvailableAssignments) { <option value="@item.Id">@GetAssignmentDisciplineName(item) — @item.Teacher?.Name (@GetLessonTypeName(item.LessonType), @item.AssignedHours год.)</option> }
                     </select></div>
                 <div class="col-md-3"><label class="form-label fw-bold">Аудиторія</label><select class="form-select" @bind="classRoomId"><option value="0">Без аудиторії</option>
                     @foreach (var room in classRooms) { <option value="@room.Id">@room.Name</option> }
@@ -138,6 +138,7 @@ else if (data is not null)
     private List<Semester> semesters = [];
     private List<Group> groups = [];
     private List<GroupDiscipline> groupDisciplines = [];
+    private List<Discipline> disciplines = [];
     private BaseScheduleBuilderResponse? data;
     private BaseScheduleProjectionResponse? projection;
     private List<BaseLesson> baseLessons = [];
@@ -186,6 +187,7 @@ else if (data is not null)
             semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
             groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
             groupDisciplines = await Http.GetFromJsonAsync<List<GroupDiscipline>>("api/groupdisciplines") ?? [];
+            disciplines = await Http.GetFromJsonAsync<List<Discipline>>("api/disciplines") ?? [];
             assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
             classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
             teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
@@ -371,6 +373,14 @@ else if (data is not null)
     private async Task RefreshTeacherReport() { if (teacherReport is not null) await LoadTeacherReport(); }
     private static string GetLessonTypeName(LessonType value) => value switch
     { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
+    private string GetAssignmentDisciplineName(TeachingAssignment assignment)
+    {
+        var groupDiscipline = assignment.GroupDiscipline ??
+            groupDisciplines.FirstOrDefault(x => x.Id == assignment.GroupDisciplineId);
+        return groupDiscipline?.Discipline?.Name ??
+            disciplines.FirstOrDefault(x => x.Id == groupDiscipline?.DisciplineId)?.Name ??
+            "Дисципліну не знайдено";
+    }
     private static string GetDisciplineScheduleStatus(BaseScheduleDisciplineItem item) =>
         item.IsScheduleExceeded ? "Перевищено" : item.RemainingScheduledHours > 0 ? "Не заплановано" : "Виконано";
     private static string GetDisciplineScheduleStatusClass(BaseScheduleDisciplineItem item) =>
