@@ -41,7 +41,7 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
 @if (editingLesson is not null)
 {
     <div class="card border-primary shadow-sm mb-4"><div class="card-header bg-primary text-white">@(isCreatingLesson ? "Нове реальне заняття" : "Редагування реального заняття")</div><div class="card-body"><div class="row g-3 align-items-end">
-        <div class="col-md-3"><label class="form-label fw-bold">Дата</label><input type="date" class="form-control" @bind="editingLesson.LessonDate" @bind:format="yyyy-MM-dd" /></div>
+        <div class="col-md-3"><label class="form-label fw-bold">Дата</label><input type="date" class="form-control" min="@EditorMinDate" max="@EditorMaxDate" @bind="editingLesson.LessonDate" @bind:format="yyyy-MM-dd" /></div>
         <div class="col-md-2"><label class="form-label fw-bold">Пара</label><select class="form-select" @bind="editingLesson.LessonPosition">@for (var i=1;i<=8;i++){<option value="@i">@i</option>}</select></div>
         <div class="col-md-4"><label class="form-label fw-bold">Призначення</label><select class="form-select" @bind="editingLesson.TeachingAssignmentId"><option value="">Оберіть призначення</option>@foreach(var item in AvailableAssignments){<option value="@item.Id">@item.GroupDiscipline?.Group?.Name · @item.GroupDiscipline?.Discipline?.Name · @item.Teacher?.Name · @GetLessonTypeName(item.LessonType)</option>}</select></div>
         <div class="col-md-3"><label class="form-label fw-bold">Аудиторія</label><select class="form-select" @bind="editingLesson.ClassRoomId"><option value="">Без аудиторії</option>@foreach(var room in classRooms){<option value="@room.Id">@room.Name</option>}</select></div>
@@ -113,7 +113,10 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private string errorMessage = "";
     private string successMessage = "";
     private RealLessonTransferWeekOption? SelectedWeek => weeks.FirstOrDefault(x => x.WeekStartDate.ToString("yyyy-MM-dd") == weekStart);
+    private Semester? SelectedSemester => semesters.FirstOrDefault(x => x.Id == semesterId);
     private IEnumerable<TeachingAssignment> AvailableAssignments => assignments.Where(x => x.GroupDiscipline?.SemesterId == semesterId);
+    private string EditorMinDate => (isCreatingLesson ? SelectedWeek?.ActiveStartDate : SelectedSemester?.StartDate)?.ToString("yyyy-MM-dd") ?? "";
+    private string EditorMaxDate => (isCreatingLesson ? SelectedWeek?.ActiveEndDate : SelectedSemester?.EndDate)?.ToString("yyyy-MM-dd") ?? "";
     private int PlannedLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Planned);
     private int CompletedLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Completed);
     private int CancelledLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Cancelled);
