@@ -195,7 +195,7 @@ else if (data is not null)
             ? await Http.PutAsJsonAsync($"api/BaseLessons/{editingLessonId}", lesson)
             : await Http.PostAsJsonAsync("api/BaseLessons", lesson);
         if (!response.IsSuccessStatusCode) { errorMessage = await ReadApiMessage(response); return; }
-        var updated = editingLessonId > 0; showEditor = false; editingLessonId = 0; await LoadBuilder();
+        var updated = editingLessonId > 0; showEditor = false; editingLessonId = 0; await LoadBuilder(); await RefreshTeacherReport();
         successMessage = updated ? "Заняття успішно оновлено." : "Заняття успішно створено.";
     }
 
@@ -207,6 +207,7 @@ else if (data is not null)
         if (!response.IsSuccessStatusCode) { errorMessage = await ReadApiMessage(response); return; }
         if (editingLessonId == id) CloseEditor();
         await LoadBuilder();
+        await RefreshTeacherReport();
         successMessage = "Заняття успішно видалено.";
     }
 
@@ -250,6 +251,7 @@ else if (data is not null)
 
     private static string GetWeekName(WeekProperty value) => value == WeekProperty.Numerator ? "Чисельник" : "Знаменник";
     private async Task LoadTeacherReport() { if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача."; return; } errorMessage = ""; teacherReport = await Http.GetFromJsonAsync<BaseTeacherHoursReportResponse>($"api/BaseScheduleReports/semester/{semesterId}/teacher/{reportTeacherId}/hours"); }
+    private async Task RefreshTeacherReport() { if (teacherReport is not null) await LoadTeacherReport(); }
     private static string GetLessonTypeName(LessonType value) => value switch
     { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
 }
