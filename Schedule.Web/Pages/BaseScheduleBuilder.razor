@@ -110,6 +110,14 @@ else if (data is not null)
             <td class="@(item.IsScheduleExceeded ? "text-danger fw-bold" : "text-muted")">@item.ExceededScheduledHours</td>
         </tr> }</tbody>
     </table></div>
+
+    <div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Планове навантаження викладача</strong></div><div class="card-body"><div class="row g-3 align-items-end">
+        <div class="col-md-8"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="reportTeacherId"><option value="0">Оберіть викладача</option>@foreach(var teacher in teachers){<option value="@teacher.Id">@teacher.Name</option>}</select></div>
+        <div class="col-md-4"><button class="btn btn-outline-primary w-100" @onclick="LoadTeacherReport">Показати звіт</button></div>
+    </div></div>
+    @if (teacherReport is not null) { <div class="card-body border-top"><div class="row text-center g-3 mb-3"><div class="col"><div class="text-muted small">План</div><strong>@teacherReport.PlannedHours</strong></div><div class="col"><div class="text-muted small">Розподілено</div><strong>@teacherReport.AssignedHours</strong></div><div class="col"><div class="text-muted small">За розкладом</div><strong>@teacherReport.ScheduledHours</strong></div><div class="col"><div class="text-muted small">Залишок</div><strong>@teacherReport.RemainingScheduledHours</strong></div><div class="col"><div class="text-muted small">Перевищення</div><strong class="@(teacherReport.IsScheduleExceeded ? "text-danger" : "text-success")">@teacherReport.ExceededScheduledHours</strong></div></div>
+        <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Дисципліна</th><th>План</th><th>Розподілено</th><th>За розкладом</th><th>Залишок</th><th>Перевищення</th></tr></thead><tbody>@foreach(var item in teacherReport.Disciplines){<tr><td>@item.DisciplineName</td><td>@item.PlannedHours</td><td>@item.AssignedHours</td><td>@item.ScheduledHours</td><td>@item.RemainingScheduledHours</td><td class="@(item.IsScheduleExceeded ? "text-danger fw-bold" : "")">@item.ExceededScheduledHours</td></tr>}</tbody></table></div>
+    </div> }</div>
 }
 
 @code {
@@ -120,6 +128,9 @@ else if (data is not null)
     private List<BaseLesson> baseLessons = [];
     private List<TeachingAssignment> assignments = [];
     private List<ClassRoom> classRooms = [];
+    private List<Teacher> teachers = [];
+    private BaseTeacherHoursReportResponse? teacherReport;
+    private int reportTeacherId;
     private readonly WeekDay[] weekDays = Enum.GetValues<WeekDay>();
     private WeekProperty selectedWeek = WeekProperty.Numerator;
     private int semesterId;
@@ -144,6 +155,7 @@ else if (data is not null)
         groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
         assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
         classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
+        teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
     }
 
     private void OpenEditor(WeekDay day, int position) { editingLessonId = 0; editorDay = day; editorPosition = position; editorWeekProperty = selectedWeek; assignmentId = 0; classRoomId = 0; showEditor = true; errorMessage = ""; }
@@ -213,6 +225,7 @@ else if (data is not null)
     };
 
     private static string GetWeekName(WeekProperty value) => value == WeekProperty.Numerator ? "Чисельник" : "Знаменник";
+    private async Task LoadTeacherReport() { if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача."; return; } errorMessage = ""; teacherReport = await Http.GetFromJsonAsync<BaseTeacherHoursReportResponse>($"api/BaseScheduleReports/semester/{semesterId}/teacher/{reportTeacherId}/hours"); }
     private static string GetLessonTypeName(LessonType value) => value switch
     { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
 }
