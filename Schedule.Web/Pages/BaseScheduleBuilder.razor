@@ -17,7 +17,7 @@
             </select></div>
         <div class="col-md-5"><label class="form-label fw-bold">Група</label>
             <select class="form-select" @bind="groupId" @bind:after="ChangeGroup"><option value="0">Оберіть групу</option>
-                @foreach (var item in groups) { <option value="@item.Id">@item.Name</option> }
+                @foreach (var item in AvailableGroups) { <option value="@item.Id">@item.Name</option> }
             </select></div>
         <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="LoadBuilder" disabled="@isLoading">@(isLoading ? "Завантаження…" : "Показати")</button></div>
     </div>
@@ -137,6 +137,7 @@ else if (data is not null)
 @code {
     private List<Semester> semesters = [];
     private List<Group> groups = [];
+    private List<GroupDiscipline> groupDisciplines = [];
     private BaseScheduleBuilderResponse? data;
     private BaseScheduleProjectionResponse? projection;
     private List<BaseLesson> baseLessons = [];
@@ -166,6 +167,10 @@ else if (data is not null)
 
     private IEnumerable<TeachingAssignment> AvailableAssignments => assignments.Where(x =>
         x.GroupDiscipline?.GroupId == groupId && x.GroupDiscipline.SemesterId == semesterId);
+    private IEnumerable<Group> AvailableGroups => semesterId <= 0
+        ? []
+        : groups.Where(group => groupDisciplines.Any(item =>
+            item.SemesterId == semesterId && item.GroupId == group.Id));
     private int ProjectedLessonCount => projection?.Weeks.Sum(x => x.Lessons.Count) ?? 0;
     private int ProjectedAcademicHours => ProjectedLessonCount * (data?.AcademicHoursPerLesson ?? 0);
 
@@ -175,6 +180,7 @@ else if (data is not null)
         {
             semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
             groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
+            groupDisciplines = await Http.GetFromJsonAsync<List<GroupDiscipline>>("api/groupdisciplines") ?? [];
             assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
             classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
             teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
