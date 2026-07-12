@@ -74,6 +74,7 @@ else if (data is not null)
                                     {
                                         <div class="fw-semibold">@lesson.Discipline?.Name</div>
                                         <div class="small text-muted">@lesson.Teacher?.Name</div>
+                                        <span class="badge bg-secondary">@GetLessonTypeName(lesson.LessonType)</span>
                                         @if (lesson.ClassRoom is not null) { <span class="badge bg-light text-dark border">@lesson.ClassRoom.Name</span> }
                                         @if (lesson.WeekProperty == WeekProperty.EveryWeek) { <span class="badge bg-info text-dark ms-1">Щотижня</span> }
                                         <div class="mt-2 d-flex gap-1">
