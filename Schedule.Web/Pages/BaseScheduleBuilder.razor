@@ -115,7 +115,7 @@ else if (data is not null)
 
     <div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Планове навантаження викладача</strong></div><div class="card-body"><div class="row g-3 align-items-end">
         <div class="col-md-8"><label class="form-label fw-bold">Викладач</label><select class="form-select" @bind="reportTeacherId"><option value="0">Оберіть викладача</option>@foreach(var teacher in teachers){<option value="@teacher.Id">@teacher.Name</option>}</select></div>
-        <div class="col-md-4"><button class="btn btn-outline-primary w-100" @onclick="LoadTeacherReport">Показати звіт</button></div>
+        <div class="col-md-4"><button class="btn btn-outline-primary w-100" disabled="@isLoadingTeacherReport" @onclick="LoadTeacherReport">@(isLoadingTeacherReport ? "Завантаження…" : "Показати звіт")</button></div>
     </div></div>
     @if (teacherReport is not null) { <div class="card-body border-top"><div class="row text-center g-3 mb-3"><div class="col"><div class="text-muted small">План</div><strong>@teacherReport.PlannedHours</strong></div><div class="col"><div class="text-muted small">Розподілено</div><strong>@teacherReport.AssignedHours</strong></div><div class="col"><div class="text-muted small">За розкладом</div><strong>@teacherReport.ScheduledHours</strong></div><div class="col"><div class="text-muted small">Залишок</div><strong>@teacherReport.RemainingScheduledHours</strong></div><div class="col"><div class="text-muted small">Перевищення</div><strong class="@(teacherReport.IsScheduleExceeded ? "text-danger" : "text-success")">@teacherReport.ExceededScheduledHours</strong></div></div>
         <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Дисципліна</th><th>План</th><th>Розподілено</th><th>За розкладом</th><th>Залишок</th><th>Перевищення</th></tr></thead><tbody>@foreach(var item in teacherReport.Disciplines){<tr><td>@item.DisciplineName</td><td>@item.PlannedHours</td><td>@item.AssignedHours</td><td>@item.ScheduledHours</td><td>@item.RemainingScheduledHours</td><td class="@(item.IsScheduleExceeded ? "text-danger fw-bold" : "")">@item.ExceededScheduledHours</td></tr>}</tbody></table></div>
@@ -140,6 +140,7 @@ else if (data is not null)
     private bool isLoading;
     private bool isSaving;
     private int deletingLessonId;
+    private bool isLoadingTeacherReport;
     private string errorMessage = "";
     private string successMessage = "";
     private bool showEditor;
@@ -287,7 +288,25 @@ else if (data is not null)
     };
 
     private static string GetWeekName(WeekProperty value) => value == WeekProperty.Numerator ? "Чисельник" : "Знаменник";
-    private async Task LoadTeacherReport() { if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача."; return; } errorMessage = ""; teacherReport = await Http.GetFromJsonAsync<BaseTeacherHoursReportResponse>($"api/BaseScheduleReports/semester/{semesterId}/teacher/{reportTeacherId}/hours"); }
+    private async Task LoadTeacherReport()
+    {
+        if (semesterId <= 0 || reportTeacherId <= 0) { errorMessage = "Оберіть семестр і викладача."; return; }
+        errorMessage = "";
+        isLoadingTeacherReport = true;
+        try
+        {
+            teacherReport = await Http.GetFromJsonAsync<BaseTeacherHoursReportResponse>($"api/BaseScheduleReports/semester/{semesterId}/teacher/{reportTeacherId}/hours");
+        }
+        catch (Exception)
+        {
+            teacherReport = null;
+            errorMessage = "Не вдалося завантажити звіт викладача. Перевірте з’єднання із сервером і повторіть спробу.";
+        }
+        finally
+        {
+            isLoadingTeacherReport = false;
+        }
+    }
     private async Task RefreshTeacherReport() { if (teacherReport is not null) await LoadTeacherReport(); }
     private static string GetLessonTypeName(LessonType value) => value switch
     { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
