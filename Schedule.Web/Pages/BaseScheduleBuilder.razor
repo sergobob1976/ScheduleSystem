@@ -114,12 +114,14 @@ else if (data is not null)
         </div>
     }
     <div class="table-responsive card shadow-sm"><table class="table table-hover align-middle mb-0">
-        <thead class="table-light"><tr><th>Дисципліна</th><th>План</th><th>Розподілено</th><th>За розкладом</th><th>Залишок</th><th>Перевищення</th></tr></thead>
+        <thead class="table-light"><tr><th>Дисципліна</th><th>План</th><th>Розподілено</th><th>За розкладом</th><th>Залишок</th><th>Перевищення</th><th>Стан</th></tr></thead>
         <tbody>@foreach (var item in data.Disciplines) { <tr>
             <td class="fw-semibold">@item.DisciplineName</td><td>@item.TotalPlannedHours</td><td>@item.TotalAssignedHours</td><td>@item.ScheduledHours</td>
             <td class="@(item.RemainingScheduledHours > 0 ? "text-warning fw-bold" : "text-success")">@item.RemainingScheduledHours</td>
             <td class="@(item.IsScheduleExceeded ? "text-danger fw-bold" : "text-muted")">@item.ExceededScheduledHours</td>
+            <td><span class="badge @GetDisciplineScheduleStatusClass(item)">@GetDisciplineScheduleStatus(item)</span></td>
         </tr> }</tbody>
+        <tfoot class="table-light fw-bold"><tr><td>Усього</td><td>@data.Disciplines.Sum(x => x.TotalPlannedHours)</td><td>@data.Disciplines.Sum(x => x.TotalAssignedHours)</td><td>@data.Disciplines.Sum(x => x.ScheduledHours)</td><td>@data.Disciplines.Sum(x => x.RemainingScheduledHours)</td><td>@data.Disciplines.Sum(x => x.ExceededScheduledHours)</td><td></td></tr></tfoot>
     </table></div>
 
     <div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Планове навантаження викладача</strong></div><div class="card-body"><div class="row g-3 align-items-end">
@@ -349,4 +351,8 @@ else if (data is not null)
     private async Task RefreshTeacherReport() { if (teacherReport is not null) await LoadTeacherReport(); }
     private static string GetLessonTypeName(LessonType value) => value switch
     { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
+    private static string GetDisciplineScheduleStatus(BaseScheduleDisciplineItem item) =>
+        item.IsScheduleExceeded ? "Перевищено" : item.RemainingScheduledHours > 0 ? "Не заплановано" : "Виконано";
+    private static string GetDisciplineScheduleStatusClass(BaseScheduleDisciplineItem item) =>
+        item.IsScheduleExceeded ? "bg-danger" : item.RemainingScheduledHours > 0 ? "bg-warning text-dark" : "bg-success";
 }
