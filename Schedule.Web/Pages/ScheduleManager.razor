@@ -21,7 +21,13 @@
 </div></div></div>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
-else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-success">@successMessage</div> }
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success d-flex justify-content-between align-items-center gap-3">
+        <span>@successMessage</span>
+        <button type="button" class="btn btn-sm btn-success" @onclick="DismissSuccessMessage">ОК</button>
+    </div>
+}
 
 @if (SelectedWeek is not null)
 {
@@ -43,7 +49,7 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
     <div class="card border-primary shadow-sm mb-4"><div class="card-header bg-primary text-white">@(isCreatingLesson ? "Нове реальне заняття" : "Редагування реального заняття")</div><div class="card-body"><div class="row g-3 align-items-end">
         <div class="col-md-3"><label class="form-label fw-bold">Дата</label><input type="date" class="form-control" min="@EditorMinDate" max="@EditorMaxDate" @bind="editingLesson.LessonDate" @bind:format="yyyy-MM-dd" /></div>
         <div class="col-md-2"><label class="form-label fw-bold">Пара</label><select class="form-select" @bind="editingLesson.LessonPosition">@for (var i=1;i<=8;i++){<option value="@i">@i</option>}</select></div>
-        <div class="col-md-4"><label class="form-label fw-bold">Призначення</label><select class="form-select" @bind="editingLesson.TeachingAssignmentId"><option value="">Оберіть призначення</option>@foreach(var item in AvailableAssignments){<option value="@item.Id">@item.GroupDiscipline?.Group?.Name · @item.GroupDiscipline?.Discipline?.Name · @item.Teacher?.Name · @GetLessonTypeName(item.LessonType)</option>}</select></div>
+        <div class="col-md-4"><label class="form-label fw-bold">Призначення</label><select class="form-select" @bind="editingLesson.TeachingAssignmentId"><option value="">Оберіть призначення</option>@foreach(var item in AvailableAssignments){<option value="@item.Id">@GetAssignmentGroupName(item) · @GetAssignmentDisciplineName(item) · @item.Teacher?.Name · @GetLessonTypeName(item.LessonType)</option>}</select></div>
         <div class="col-md-3"><label class="form-label fw-bold">Аудиторія</label><select class="form-select" @bind="editingLesson.ClassRoomId"><option value="">Без аудиторії</option>@foreach(var room in classRooms){<option value="@room.Id">@room.Name</option>}</select></div>
         <div class="col-md-6"><label class="form-label fw-bold">Посилання на конференцію</label><input class="form-control" type="url" placeholder="https://..." @bind="editingLesson.ConferenceLink" /></div>
         <div class="col-md-6"><label class="form-label fw-bold">Посилання на матеріали</label><input class="form-control" type="url" placeholder="https://..." @bind="editingLesson.ResourceLink" /></div>
@@ -91,6 +97,7 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private List<ClassRoom> classRooms = [];
     private List<Group> groups = [];
     private List<GroupDiscipline> groupDisciplines = [];
+    private List<Discipline> disciplines = [];
     private List<Teacher> teachers = [];
     private List<TeacherSemesterLoad> teacherSemesterLoads = [];
     private RealLessonHoursReportResponse? hoursReport;
@@ -138,18 +145,35 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
         try
         {
             semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
+            SelectDefaultSemester();
             assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
             classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
             groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
             groupDisciplines = await Http.GetFromJsonAsync<List<GroupDiscipline>>("api/groupdisciplines") ?? [];
+            disciplines = await Http.GetFromJsonAsync<List<Discipline>>("api/disciplines") ?? [];
             teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
             teacherSemesterLoads = await Http.GetFromJsonAsync<List<TeacherSemesterLoad>>("api/teachersemesterloads") ?? [];
+            await LoadWeeks();
         }
         catch (Exception)
         {
             errorMessage = "Не вдалося завантажити довідкові дані для реального розкладу. Перевірте з’єднання із сервером і оновіть сторінку.";
         }
     }
+
+    private void SelectDefaultSemester()
+    {
+        var today = DateTime.Today;
+        var semester = semesters
+            .Where(item => item.StartDate.Date <= today && item.EndDate.Date >= today)
+            .OrderBy(item => item.StartDate)
+            .FirstOrDefault()
+            ?? semesters.Where(item => item.StartDate.Date > today).OrderBy(item => item.StartDate).FirstOrDefault()
+            ?? semesters.Where(item => item.EndDate.Date < today).OrderByDescending(item => item.EndDate).FirstOrDefault();
+        semesterId = semester?.Id ?? 0;
+    }
+
+    private void DismissSuccessMessage() => successMessage = "";
     private async Task ChangeSemester()
     {
         scheduleGroupId = 0;
@@ -416,6 +440,22 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private static string GetStatusClass(RealLessonStatus status) => status switch { RealLessonStatus.Completed => "border-success text-success", RealLessonStatus.Cancelled => "border-danger text-danger", _ => "border-secondary" };
     private static string GetLessonTypeName(LessonType value) => value switch
     { LessonType.Lecture => "Лекція", LessonType.Practical => "Практичне", LessonType.Laboratory => "Лабораторне", LessonType.Seminar => "Семінар", _ => "Інше" };
+    private GroupDiscipline? GetAssignmentGroupDiscipline(TeachingAssignment assignment) =>
+        assignment.GroupDiscipline ?? groupDisciplines.FirstOrDefault(x => x.Id == assignment.GroupDisciplineId);
+    private string GetAssignmentGroupName(TeachingAssignment assignment)
+    {
+        var groupDiscipline = GetAssignmentGroupDiscipline(assignment);
+        return groupDiscipline?.Group?.Name ??
+            groups.FirstOrDefault(x => x.Id == groupDiscipline?.GroupId)?.Name ??
+            "Групу не знайдено";
+    }
+    private string GetAssignmentDisciplineName(TeachingAssignment assignment)
+    {
+        var groupDiscipline = GetAssignmentGroupDiscipline(assignment);
+        return groupDiscipline?.Discipline?.Name ??
+            disciplines.FirstOrDefault(x => x.Id == groupDiscipline?.DisciplineId)?.Name ??
+            "Дисципліну не знайдено";
+    }
     private static string GetDayName(WeekDay day) => day switch
     {
         WeekDay.Monday => "Понеділок", WeekDay.Tuesday => "Вівторок",
