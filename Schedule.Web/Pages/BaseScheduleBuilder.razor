@@ -24,8 +24,8 @@
 </div></div>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage)) { <div class="alert alert-danger">@errorMessage</div> }
-else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-success">@successMessage</div> }
-else if (isLoading) { <div class="alert alert-info">Завантаження базового розкладу…</div> }
+@if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-success">@successMessage</div> }
+@if (isLoading) { <div class="alert alert-info">Завантаження базового розкладу…</div> }
 else if (data is not null)
 {
     @if (showEditor)
