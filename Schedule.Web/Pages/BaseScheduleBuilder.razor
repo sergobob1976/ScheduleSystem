@@ -290,7 +290,7 @@ else if (data is not null)
         var content = await response.Content.ReadAsStringAsync();
         try { using var json = JsonDocument.Parse(content); if (json.RootElement.TryGetProperty("message", out var value)) return value.GetString() ?? "Операцію не виконано."; }
         catch (JsonException) { }
-        return string.IsNullOrWhiteSpace(content) ? "Операцію не виконано." : content;
+        return "Операцію не виконано. Перевірте з’єднання із сервером і повторіть спробу.";
     }
 
     private async Task LoadBuilder()
