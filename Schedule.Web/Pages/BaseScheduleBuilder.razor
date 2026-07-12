@@ -97,14 +97,14 @@ else if (data is not null)
     </div>
     @if (projection is not null)
     {
-        <div class="card shadow-sm mb-4"><div class="card-header bg-white"><strong>Проєкція шаблону на семестр</strong></div>
-            <div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0"><thead class="table-light"><tr><th>Тиждень</th><th>Дати</th><th>Тип</th><th>Занять</th><th></th></tr></thead><tbody>
+        <div class="card shadow-sm mb-4"><div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2"><strong>Проєкція шаблону на семестр</strong><div class="d-flex gap-2"><span class="badge bg-secondary">Тижнів: @projection.Weeks.Count</span><span class="badge bg-primary">Занять: @ProjectedLessonCount</span><span class="badge bg-success">Академічних годин: @ProjectedAcademicHours</span></div></div>
+            <div class="table-responsive"><table class="table table-sm table-hover align-middle mb-0"><thead class="table-light"><tr><th>Тиждень</th><th>Дати</th><th>Тип</th><th>Занять</th><th>Академічних годин</th><th></th></tr></thead><tbody>
                 @foreach (var week in projection.Weeks)
                 {
-                    <tr><td>@week.WeekNumber</td><td>@week.WeekStartDate.ToString("dd.MM")–@week.WeekEndDate.ToString("dd.MM.yyyy")</td><td><span class="badge @(week.WeekProperty == WeekProperty.Numerator ? "bg-primary" : "bg-secondary")">@GetWeekName(week.WeekProperty)</span></td><td>@week.Lessons.Count</td><td class="text-end"><button class="btn btn-sm btn-outline-secondary" disabled="@(week.Lessons.Count == 0)" @onclick="() => ToggleProjectionWeek(week.WeekNumber)">@(expandedProjectionWeeks.Contains(week.WeekNumber) ? "Згорнути" : "Деталі")</button></td></tr>
+                    <tr><td>@week.WeekNumber</td><td>@week.WeekStartDate.ToString("dd.MM")–@week.WeekEndDate.ToString("dd.MM.yyyy")</td><td><span class="badge @(week.WeekProperty == WeekProperty.Numerator ? "bg-primary" : "bg-secondary")">@GetWeekName(week.WeekProperty)</span></td><td>@week.Lessons.Count</td><td>@(week.Lessons.Count * data.AcademicHoursPerLesson)</td><td class="text-end"><button class="btn btn-sm btn-outline-secondary" disabled="@(week.Lessons.Count == 0)" @onclick="() => ToggleProjectionWeek(week.WeekNumber)">@(expandedProjectionWeeks.Contains(week.WeekNumber) ? "Згорнути" : "Деталі")</button></td></tr>
                     @if (expandedProjectionWeeks.Contains(week.WeekNumber))
                     {
-                        <tr><td colspan="5" class="p-0 bg-light"><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Пара</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Повторення</th></tr></thead><tbody>
+                        <tr><td colspan="6" class="p-0 bg-light"><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Дата</th><th>Пара</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Повторення</th></tr></thead><tbody>
                             @foreach (var lesson in week.Lessons.OrderBy(x => x.LessonDate).ThenBy(x => x.LessonPosition))
                             { <tr><td>@lesson.LessonDate.ToString("dd.MM.yyyy")</td><td>@lesson.LessonPosition</td><td>@lesson.DisciplineName</td><td>@lesson.TeacherName</td><td>@(lesson.ClassRoomName ?? "—")</td><td>@GetWeekName(lesson.SourceWeekProperty)</td></tr> }
                         </tbody></table></div></td></tr>
@@ -163,6 +163,8 @@ else if (data is not null)
 
     private IEnumerable<TeachingAssignment> AvailableAssignments => assignments.Where(x =>
         x.GroupDiscipline?.GroupId == groupId && x.GroupDiscipline.SemesterId == semesterId);
+    private int ProjectedLessonCount => projection?.Weeks.Sum(x => x.Lessons.Count) ?? 0;
+    private int ProjectedAcademicHours => ProjectedLessonCount * (data?.AcademicHoursPerLesson ?? 0);
 
     protected override async Task OnInitializedAsync()
     {

@@ -45,7 +45,7 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
     </div></div></div>
 }
 
-<div class="card shadow-sm"><div class="card-header bg-white d-flex justify-content-between"><strong>Заняття вибраного тижня</strong><span class="badge bg-primary">@lessons.Count</span></div>
+<div class="card shadow-sm"><div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2"><strong>Заняття вибраного тижня</strong><div class="d-flex flex-wrap gap-2"><span class="badge bg-primary">Усього: @lessons.Count</span><span class="badge bg-secondary">Заплановано: @PlannedLessonCount</span><span class="badge bg-success">Проведено: @CompletedLessonCount</span><span class="badge bg-danger">Скасовано: @CancelledLessonCount</span></div></div>
 <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Дата</th><th>Пара</th><th>Група</th><th>Дисципліна</th><th>Викладач</th><th>Аудиторія</th><th>Стан</th><th>Дії</th></tr></thead>
 <tbody>@if (isLoadingSchedule) { <tr><td colspan="8" class="text-center text-muted py-4">Завантаження…</td></tr> }
 else if (lessons.Count == 0) { <tr><td colspan="8" class="text-center text-muted py-4">Занять немає.</td></tr> }
@@ -107,6 +107,9 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private string successMessage = "";
     private RealLessonTransferWeekOption? SelectedWeek => weeks.FirstOrDefault(x => x.WeekStartDate.ToString("yyyy-MM-dd") == weekStart);
     private IEnumerable<TeachingAssignment> AvailableAssignments => assignments.Where(x => x.GroupDiscipline?.SemesterId == semesterId);
+    private int PlannedLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Planned);
+    private int CompletedLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Completed);
+    private int CancelledLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Cancelled);
 
     protected override async Task OnInitializedAsync() { semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? []; assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? []; classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? []; groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? []; teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? []; }
     private async Task ChangeSemester()
