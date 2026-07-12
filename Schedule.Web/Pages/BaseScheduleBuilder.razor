@@ -170,11 +170,18 @@ else if (data is not null)
 
     protected override async Task OnInitializedAsync()
     {
-        semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
-        groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
-        assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
-        classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
-        teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
+        try
+        {
+            semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
+            groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
+            assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
+            classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
+            teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
+        }
+        catch (Exception)
+        {
+            errorMessage = "Не вдалося завантажити довідкові дані для базового розкладу. Перевірте з’єднання із сервером і оновіть сторінку.";
+        }
     }
 
     private void ChangeSemester()

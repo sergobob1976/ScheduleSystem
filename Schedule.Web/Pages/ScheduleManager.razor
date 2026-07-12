@@ -116,7 +116,21 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private int CompletedLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Completed);
     private int CancelledLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Cancelled);
 
-    protected override async Task OnInitializedAsync() { semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? []; assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? []; classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? []; groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? []; teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? []; }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            semesters = await Http.GetFromJsonAsync<List<Semester>>("api/semesters") ?? [];
+            assignments = await Http.GetFromJsonAsync<List<TeachingAssignment>>("api/teachingassignments") ?? [];
+            classRooms = await Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms") ?? [];
+            groups = await Http.GetFromJsonAsync<List<Group>>("api/groups") ?? [];
+            teachers = await Http.GetFromJsonAsync<List<Teacher>>("api/teachers") ?? [];
+        }
+        catch (Exception)
+        {
+            errorMessage = "Не вдалося завантажити довідкові дані для реального розкладу. Перевірте з’єднання із сервером і оновіть сторінку.";
+        }
+    }
     private async Task ChangeSemester()
     {
         scheduleGroupId = 0;
