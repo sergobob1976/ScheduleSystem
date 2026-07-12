@@ -30,6 +30,10 @@ else if (!string.IsNullOrWhiteSpace(successMessage)) { <div class="alert alert-s
         <div><div class="small text-muted">Фактично перенесено</div><strong>@(SelectedWeek.TransferredWeekPropertyName ?? "Ще не перенесено")</strong></div>
         <div><div class="small text-muted">Створено занять</div><strong>@(SelectedWeek.IsTransferred ? SelectedWeek.TransferredLessonCount.ToString() : "—")</strong></div>
         <div><label class="form-label small fw-bold mb-1">Тип для перенесення</label><select class="form-select form-select-sm" disabled="@(SelectedWeek.IsTransferred || isTransferring)" @bind="transferProperty"><option value="@WeekProperty.Numerator">Чисельник</option><option value="@WeekProperty.Denominator">Знаменник</option></select></div>
+        @if (!SelectedWeek.IsTransferred && transferProperty != SelectedWeek.RecommendedWeekProperty)
+        {
+            <div class="alert alert-warning py-2 px-3 mb-0">Обрано тип тижня, відмінний від рекомендованого. Перенесення буде виконано за вибором диспетчера.</div>
+        }
     </div></div>
 }
 
