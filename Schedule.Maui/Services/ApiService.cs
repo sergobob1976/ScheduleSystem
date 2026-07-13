@@ -1,37 +1,45 @@
-﻿using System.Net.Http.Json;
-using Schedule.Core.Models;
+using System.Net.Http.Json;
+using Schedule.Core.DTOs;
 
 namespace Schedule.Maui.Services;
 
 public class ApiService
 {
     private readonly HttpClient _httpClient;
-    private const string BaseUrl = "https://localhost:7085/";
 
     public ApiService()
     {
-        _httpClient = new HttpClient { BaseAddress = new Uri(BaseUrl) };
+        var handler = new HttpClientHandler();
+
+#if DEBUG && !ANDROID
+        handler.ServerCertificateCustomValidationCallback =
+            HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
+#endif
+
+        _httpClient = new HttpClient(handler)
+        {
+#if ANDROID
+            BaseAddress = new Uri("http://10.0.2.2:5271/"),
+#else
+            BaseAddress = new Uri("https://localhost:7085/"),
+#endif
+            Timeout = TimeSpan.FromSeconds(15)
+        };
     }
 
-    public async Task<List<RealLesson>?> GetRealLessonsAsync(int groupId) =>
-        await TryGetAsync<List<RealLesson>>($"api/RealLessons/group/{groupId}");
+    public async Task<MobileScheduleOptionsResponse> GetOptionsAsync() =>
+        await _httpClient.GetFromJsonAsync<MobileScheduleOptionsResponse>(
+            "api/mobile-schedule/options")
+        ?? new MobileScheduleOptionsResponse();
 
-    public async Task<List<Group>?> GetGroupsAsync() => await TryGetAsync<List<Group>>("api/Groups");
-    public async Task<List<Discipline>?> GetDisciplinesAsync() => await TryGetAsync<List<Discipline>>("api/Disciplines");
-    public async Task<List<Teacher>?> GetTeachersAsync() => await TryGetAsync<List<Teacher>>("api/Teachers");
-    public async Task<List<ClassRoom>?> GetClassRoomsAsync() => await TryGetAsync<List<ClassRoom>>("api/ClassRooms");
-    public async Task<List<Semester>?> GetSemestersAsync() => await TryGetAsync<List<Semester>>("api/Semesters");
-
-    private async Task<T?> TryGetAsync<T>(string url) where T : class
+    public async Task<List<MobileScheduleLessonResponse>> GetLessonsAsync(
+        bool forTeacher,
+        int filterId,
+        DateTime date)
     {
-        try
-        {
-            return await _httpClient.GetFromJsonAsync<T>(url);
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"Мережева помилка ({url}): {ex.Message}");
-            return null;
-        }
+        var filterType = forTeacher ? "teacher" : "group";
+        return await _httpClient.GetFromJsonAsync<List<MobileScheduleLessonResponse>>(
+            $"api/mobile-schedule/{filterType}/{filterId}/date/{date:yyyy-MM-dd}")
+            ?? [];
     }
 }

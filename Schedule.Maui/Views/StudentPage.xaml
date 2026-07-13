@@ -1,68 +1,307 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="Schedule.Maui.Views.StudentPage"
-             Title="Розклад занять">
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="Schedule.Maui.Views.StudentPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewModels="clr-namespace:Schedule.Maui.ViewModels"
+    x:DataType="viewModels:ScheduleViewModel"
+    Shell.NavBarIsVisible="False"
+    BackgroundColor="#F4F6F8">
 
-    <Grid RowDefinitions="Auto, Auto, *" Padding="15" RowSpacing="10">
+    <Grid RowDefinitions="Auto,*">
+        <Grid
+            Grid.Row="0"
+            Padding="18,14"
+            ColumnDefinitions="*,Auto"
+            BackgroundColor="White">
+            <VerticalStackLayout Spacing="1">
+                <Label
+                    Text="Розклад ЧКФКЕП"
+                    FontAttributes="Bold"
+                    FontSize="19"
+                    TextColor="#17202A" />
+                <Label
+                    Text="{Binding CurrentSelection}"
+                    FontSize="12"
+                    IsVisible="{Binding IsConfigured}"
+                    TextColor="#64748B" />
+            </VerticalStackLayout>
+            <Button
+                Grid.Column="1"
+                Text="Змінити"
+                Padding="12,7"
+                FontSize="12"
+                IsVisible="{Binding IsConfigured}"
+                Clicked="OnChangeSelectionClicked"
+                BackgroundColor="#E8EDF2"
+                TextColor="#334155"
+                CornerRadius="16" />
+        </Grid>
 
-        <HorizontalStackLayout Grid.Row="0" Spacing="10" HorizontalOptions="Center">
-            <DatePicker Date="{Binding SelectedDate}" Format="dd.MM.yyyy" WidthRequest="150"/>
-            <Button Text="🔄 Оновити з сервера" 
-                    Clicked="OnSyncClicked" 
-                    BackgroundColor="#512BD4" 
-                    TextColor="White"
-                    FontAttributes="Bold"/>
-        </HorizontalStackLayout>
+        <ScrollView Grid.Row="1" IsVisible="{Binding IsNotConfigured}">
+            <VerticalStackLayout Padding="20,32" Spacing="18">
+                <Label
+                    Text="Налаштуйте свій розклад"
+                    FontAttributes="Bold"
+                    FontSize="26"
+                    TextColor="#17202A" />
+                <Label
+                    Text="Цей вибір збережеться на пристрої. Надалі достатньо просто відкрити застосунок."
+                    FontSize="15"
+                    TextColor="#64748B" />
 
-        <VerticalStackLayout Grid.Row="1" Spacing="5">
-            <Label Text="Оберіть групу:" FontAttributes="Bold" TextColor="Gray"/>
-            <Picker ItemsSource="{Binding Groups}" 
-                    ItemDisplayBinding="{Binding Name}"
-                    SelectedItem="{Binding SelectedGroup}" />
-        </VerticalStackLayout>
+                <Border
+                    Padding="18"
+                    BackgroundColor="White"
+                    Stroke="#E2E8F0"
+                    StrokeShape="RoundRectangle 18">
+                    <VerticalStackLayout Spacing="16">
+                        <Label
+                            Text="Я переглядаю розклад як:"
+                            FontAttributes="Bold"
+                            TextColor="#334155" />
 
-        <ActivityIndicator Grid.Row="2" 
-                           IsRunning="{Binding IsBusy}" 
-                           IsVisible="{Binding IsBusy}" 
-                           VerticalOptions="Center" 
-                           HorizontalOptions="Center" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <Button
+                                Text="Студент"
+                                Clicked="OnStudentModeClicked"
+                                BackgroundColor="#E8EDF2"
+                                TextColor="#334155"
+                                CornerRadius="12">
+                                <Button.Triggers>
+                                    <DataTrigger
+                                        TargetType="Button"
+                                        Binding="{Binding IsStudentMode}"
+                                        Value="True">
+                                        <Setter Property="BackgroundColor" Value="#2E7D32" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                            <Button
+                                Grid.Column="1"
+                                Text="Викладач"
+                                Clicked="OnTeacherModeClicked"
+                                BackgroundColor="#E8EDF2"
+                                TextColor="#334155"
+                                CornerRadius="12">
+                                <Button.Triggers>
+                                    <DataTrigger
+                                        TargetType="Button"
+                                        Binding="{Binding IsTeacherMode}"
+                                        Value="True">
+                                        <Setter Property="BackgroundColor" Value="#1565C0" />
+                                        <Setter Property="TextColor" Value="White" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </Grid>
 
-        <CollectionView Grid.Row="2" 
-                        ItemsSource="{Binding VisibleLessons}" 
-                        IsVisible="{Binding IsNotBusy}"
-                        Margin="0,10,0,0">
-            <CollectionView.ItemTemplate>
-                <DataTemplate>
-                    <Border Stroke="LightGray" StrokeThickness="1" Padding="15" Margin="0,5">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="8"/>
-                        </Border.StrokeShape>
-                        <VerticalStackLayout Spacing="5">
+                        <Label
+                            Text="{Binding FilterPrompt}"
+                            FontAttributes="Bold"
+                            TextColor="#334155" />
+                        <Picker
+                            Title="{Binding FilterPrompt}"
+                            ItemsSource="{Binding AvailableFilters}"
+                            ItemDisplayBinding="{Binding Name}"
+                            SelectedItem="{Binding SelectedFilter}" />
 
-                            <HorizontalStackLayout Spacing="10">
-                                <Label Text="{Binding LessonPosition, StringFormat='Пара №{0}'}" FontAttributes="Bold" TextColor="#512BD4"/>
-                                <Label Text="{Binding LessonDate, StringFormat='{0:HH:mm}'}" TextColor="DarkGray" FontAttributes="Italic"/>
-                            </HorizontalStackLayout>
+                        <ActivityIndicator
+                            IsRunning="{Binding IsLoadingOptions}"
+                            IsVisible="{Binding IsLoadingOptions}"
+                            Color="#2E7D32" />
+                        <Label
+                            Text="{Binding ConfigurationError}"
+                            IsVisible="{Binding HasConfigurationError}"
+                            TextColor="#B42318"
+                            FontSize="13" />
 
-                            <Label Text="{Binding Discipline.Name}" FontSize="16" FontAttributes="Bold" TextColor="Black"/>
+                        <Button
+                            Text="Зберегти вибір"
+                            Clicked="OnSaveSelectionClicked"
+                            BackgroundColor="#2E7D32"
+                            TextColor="White"
+                            FontAttributes="Bold"
+                            CornerRadius="12" />
+                        <Button
+                            Text="Скасувати"
+                            Clicked="OnCancelSelectionClicked"
+                            IsVisible="{Binding CanCancelConfiguration}"
+                            BackgroundColor="Transparent"
+                            TextColor="#475569" />
+                    </VerticalStackLayout>
+                </Border>
+            </VerticalStackLayout>
+        </ScrollView>
 
-                            <HorizontalStackLayout Spacing="5">
-                                <Label Text="👨‍🏫 Викладач:" TextColor="Gray"/>
-                                <Label Text="{Binding Teacher.LastName}" TextColor="#333333"/>
-                                <Label Text="{Binding Teacher.FirstName}" TextColor="#333333"/>
-                                <Label Text="{Binding Teacher.MiddleName}" TextColor="#333333"/>
-                            </HorizontalStackLayout>
+        <RefreshView
+            Grid.Row="1"
+            IsVisible="{Binding IsConfigured}"
+            IsRefreshing="{Binding IsRefreshing}"
+            Refreshing="OnRefreshing"
+            RefreshColor="#2E7D32">
+            <Grid RowDefinitions="*,Auto" Padding="0,12,0,10">
+                <CarouselView
+                    Grid.Row="0"
+                    ItemsSource="{Binding Days}"
+                    CurrentItem="{Binding SelectedDay, Mode=TwoWay}"
+                    IndicatorView="dayIndicator"
+                    PeekAreaInsets="12"
+                    Loop="False">
+                    <CarouselView.ItemTemplate>
+                        <DataTemplate x:DataType="viewModels:MobileScheduleDay">
+                            <Grid
+                                Margin="6,0"
+                                RowDefinitions="Auto,*"
+                                BackgroundColor="White">
+                                <Border
+                                    Grid.Row="0"
+                                    Padding="18,14"
+                                    BackgroundColor="{Binding HeaderColor}"
+                                    StrokeThickness="0"
+                                    StrokeShape="RoundRectangle 18,18,0,0">
+                                    <VerticalStackLayout Spacing="1">
+                                        <Label
+                                            Text="{Binding HeaderTitle}"
+                                            FontAttributes="Bold"
+                                            FontSize="25"
+                                            TextColor="White" />
+                                        <Label
+                                            Text="{Binding HeaderSubtitle}"
+                                            FontSize="13"
+                                            TextColor="#EAF2F8" />
+                                    </VerticalStackLayout>
+                                </Border>
 
-                            <HorizontalStackLayout Spacing="5">
-                                <Label Text="📍 Аудиторія:" TextColor="Gray"/>
-                                <Label Text="{Binding ClassRoom.Name}" FontAttributes="Bold" TextColor="Black"/>
-                            </HorizontalStackLayout>
+                                <Grid Grid.Row="1" RowDefinitions="Auto,*" Padding="12">
+                                    <Border
+                                        Grid.Row="0"
+                                        Margin="0,0,0,10"
+                                        Padding="10,6"
+                                        IsVisible="{Binding HasInformation}"
+                                        BackgroundColor="#FFF4D6"
+                                        StrokeThickness="0"
+                                        StrokeShape="RoundRectangle 9">
+                                        <Label
+                                            Text="{Binding InformationMessage}"
+                                            FontSize="12"
+                                            HorizontalTextAlignment="Center"
+                                            TextColor="#7A4E00" />
+                                    </Border>
 
-                        </VerticalStackLayout>
-                    </Border>
-                </DataTemplate>
-            </CollectionView.ItemTemplate>
-        </CollectionView>
+                                    <CollectionView Grid.Row="1" ItemsSource="{Binding Lessons}">
+                                        <CollectionView.ItemTemplate>
+                                            <DataTemplate x:DataType="viewModels:MobileScheduleLessonItem">
+                                                <Border
+                                                    Margin="0,0,0,10"
+                                                    Padding="14"
+                                                    BackgroundColor="#FAFBFC"
+                                                    Stroke="#DDE3EA"
+                                                    StrokeShape="RoundRectangle 14">
+                                                    <VerticalStackLayout Spacing="6">
+                                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                                            <Border
+                                                                Padding="10,5"
+                                                                BackgroundColor="#E7F3EA"
+                                                                StrokeThickness="0"
+                                                                StrokeShape="RoundRectangle 10">
+                                                                <Label
+                                                                    Text="{Binding LessonPosition, StringFormat='{0} пара'}"
+                                                                    FontAttributes="Bold"
+                                                                    TextColor="#226B35" />
+                                                            </Border>
+                                                            <Label
+                                                                Grid.Column="1"
+                                                                Text="{Binding DisciplineName}"
+                                                                FontAttributes="Bold"
+                                                                FontSize="17"
+                                                                VerticalTextAlignment="Center"
+                                                                TextColor="#17202A" />
+                                                        </Grid>
+                                                        <Label
+                                                            Text="{Binding LessonTypeName}"
+                                                            FontSize="12"
+                                                            TextColor="#64748B" />
+                                                        <Label
+                                                            Text="{Binding AudienceText}"
+                                                            TextColor="#334155" />
+                                                        <Label
+                                                            Text="{Binding ClassRoomName, StringFormat='Аудиторія: {0}'}"
+                                                            IsVisible="{Binding HasClassRoom}"
+                                                            TextColor="#334155" />
+                                                        <Label
+                                                            Text="{Binding StatusText}"
+                                                            IsVisible="{Binding IsCancelled}"
+                                                            FontAttributes="Bold"
+                                                            TextColor="#B42318" />
+                                                        <HorizontalStackLayout Spacing="8">
+                                                            <Button
+                                                                Text="Приєднатися"
+                                                                FontSize="12"
+                                                                Padding="10,6"
+                                                                IsVisible="{Binding HasConferenceLink}"
+                                                                CommandParameter="{Binding ConferenceLink}"
+                                                                Clicked="OnOpenLinkClicked"
+                                                                BackgroundColor="#1565C0"
+                                                                TextColor="White"
+                                                                CornerRadius="10" />
+                                                            <Button
+                                                                Text="Матеріали"
+                                                                FontSize="12"
+                                                                Padding="10,6"
+                                                                IsVisible="{Binding HasResourceLink}"
+                                                                CommandParameter="{Binding ResourceLink}"
+                                                                Clicked="OnOpenLinkClicked"
+                                                                BackgroundColor="#E8EDF2"
+                                                                TextColor="#334155"
+                                                                CornerRadius="10" />
+                                                        </HorizontalStackLayout>
+                                                    </VerticalStackLayout>
+                                                </Border>
+                                            </DataTemplate>
+                                        </CollectionView.ItemTemplate>
+                                    </CollectionView>
+
+                                    <ActivityIndicator
+                                        Grid.RowSpan="2"
+                                        IsRunning="{Binding IsLoading}"
+                                        IsVisible="{Binding IsLoading}"
+                                        Color="{Binding HeaderColor}"
+                                        HorizontalOptions="Center"
+                                        VerticalOptions="Center" />
+                                    <Label
+                                        Grid.RowSpan="2"
+                                        Text="Занять на цей день немає."
+                                        IsVisible="{Binding IsEmpty}"
+                                        HorizontalTextAlignment="Center"
+                                        HorizontalOptions="Center"
+                                        VerticalOptions="Center"
+                                        TextColor="#64748B" />
+                                    <Label
+                                        Grid.RowSpan="2"
+                                        Text="{Binding ErrorMessage}"
+                                        IsVisible="{Binding HasError}"
+                                        Margin="20"
+                                        HorizontalTextAlignment="Center"
+                                        HorizontalOptions="Center"
+                                        VerticalOptions="Center"
+                                        TextColor="#B42318" />
+                                </Grid>
+                            </Grid>
+                        </DataTemplate>
+                    </CarouselView.ItemTemplate>
+                </CarouselView>
+
+                <IndicatorView
+                    x:Name="dayIndicator"
+                    Grid.Row="1"
+                    Margin="0,8,0,0"
+                    HorizontalOptions="Center"
+                    IndicatorColor="#CBD5E1"
+                    SelectedIndicatorColor="#2E7D32"
+                    IndicatorSize="7" />
+            </Grid>
+        </RefreshView>
     </Grid>
 </ContentPage>

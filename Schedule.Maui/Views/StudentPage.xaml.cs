@@ -1,52 +1,50 @@
-﻿using Schedule.Maui.Services;
 using Schedule.Maui.ViewModels;
 
 namespace Schedule.Maui.Views;
 
 public partial class StudentPage : ContentPage
 {
-    private readonly SyncService _syncService;
-    private readonly StudentViewModel _viewModel;
+    private readonly ScheduleViewModel _viewModel;
 
-    public StudentPage(StudentViewModel viewModel, SyncService syncService)
+    public StudentPage(ScheduleViewModel viewModel)
     {
         InitializeComponent();
-
-        _syncService = syncService;
         _viewModel = viewModel;
-
-        BindingContext = _viewModel;
+        BindingContext = viewModel;
     }
 
-    private async void OnSyncClicked(object? sender, EventArgs e)
+    protected override async void OnAppearing()
     {
-        if (_viewModel.IsBusy) return;
+        base.OnAppearing();
+        await _viewModel.InitializeAsync();
+    }
 
-        try
+    private void OnStudentModeClicked(object? sender, EventArgs e) =>
+        _viewModel.SelectStudentMode();
+
+    private void OnTeacherModeClicked(object? sender, EventArgs e) =>
+        _viewModel.SelectTeacherMode();
+
+    private async void OnSaveSelectionClicked(object? sender, EventArgs e) =>
+        await _viewModel.SaveSelectionAsync();
+
+    private void OnChangeSelectionClicked(object? sender, EventArgs e) =>
+        _viewModel.BeginConfiguration();
+
+    private void OnCancelSelectionClicked(object? sender, EventArgs e) =>
+        _viewModel.CancelConfiguration();
+
+    private async void OnRefreshing(object? sender, EventArgs e) =>
+        await _viewModel.RefreshAsync();
+
+    private async void OnOpenLinkClicked(object? sender, EventArgs e)
+    {
+        if (sender is not Button { CommandParameter: string url } ||
+            !Uri.TryCreate(url, UriKind.Absolute, out var uri))
         {
-            _viewModel.IsBusy = true;
-
-            int groupId = _viewModel.SelectedGroup?.Id ?? 1;
-
-            bool isSuccess = await _syncService.SyncScheduleForGroupAsync(groupId);
-
-            if (isSuccess)
-            {
-                _viewModel.InitializeAsync();
-                await DisplayAlertAsync("Успіх", "Розклад успішно синхронізовано з сервером!", "OK");
-            }
-            else
-            {
-                await DisplayAlertAsync("Офлайн-режим", "Не вдалося з'єднатися з сервером. Відображаються раніше збережені дані.", "OK");
-            }
+            return;
         }
-        catch (Exception ex)
-        {
-            await DisplayAlertAsync("Помилка синхронізації", $"Сталася помилка: {ex.Message}", "OK");
-        }
-        finally
-        {
-            _viewModel.IsBusy = false;
-        }
+
+        await Launcher.Default.OpenAsync(uri);
     }
 }

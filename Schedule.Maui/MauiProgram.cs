@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using Schedule.Maui.Services;
 using Schedule.Maui.ViewModels;
 using Schedule.Maui.Views;
@@ -22,20 +22,10 @@ public static class MauiProgram
         builder.Logging.AddDebug();
 #endif
 
-        // ==========================================
-        // РЕЄСТРАЦІЯ СЕРВІСІВ (Dependency Injection)
-        // ==========================================
-
-        // Базовий HttpClient для системних потреб додатку
-        builder.Services.AddSingleton<HttpClient>();
-
-        // Локальна база SQLite та сервіс кросплатформної синхронізації
-        builder.Services.AddSingleton<DatabaseService>();
-        builder.Services.AddSingleton<SyncService>();
-
-        // Забезпечуємо створення сторінок відображення розкладу через фабрику DI
-        builder.Services.AddTransient<StudentViewModel>();
-        builder.Services.AddTransient<StudentPage>();
+        builder.Services.AddSingleton<ApiService>();
+        builder.Services.AddSingleton<ScheduleCacheService>();
+        builder.Services.AddSingleton<ScheduleViewModel>();
+        builder.Services.AddSingleton<StudentPage>();
 
         return builder.Build();
     }

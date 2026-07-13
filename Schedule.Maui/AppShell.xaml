@@ -3,16 +3,12 @@
     x:Class="Schedule.Maui.AppShell"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:local="clr-namespace:Schedule.Maui"
     xmlns:views="clr-namespace:Schedule.Maui.Views"
-    xmlns:viewmodels="clr-namespace:Schedule.Maui.ViewModels"
-    x:DataType="viewmodels:StudentViewModel"
-    Title="Schedule.Maui">
+    Title="Розклад ЧКФКЕП"
+    FlyoutBehavior="Disabled">
 
     <ShellContent
-    Title="Schedule.Maui"
-    ContentTemplate="{DataTemplate views:StudentPage}"
-    Route="StudentPage" />
-
-    
+        Title="Розклад ЧКФКЕП"
+        ContentTemplate="{DataTemplate views:StudentPage}"
+        Route="StudentPage" />
 </Shell>
