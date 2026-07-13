@@ -1,0 +1,99 @@
+@page "/login"
+@layout LoginLayout
+@using System.Text.Json
+@using Schedule.Core.DTOs
+@inject CookieAuthenticationStateProvider Authentication
+@inject NavigationManager Navigation
+
+<PageTitle>Вхід — Розклад ЧКФКЕП</PageTitle>
+
+<div class="login-page">
+    <div class="card login-card border-0 shadow-lg">
+        <div class="card-body p-4 p-md-5">
+            <div class="text-center mb-4">
+                <img class="login-logo" src="images/college-logo.png" alt="Логотип коледжу" />
+                <h1 class="h4 mb-1">Розклад ЧКФКЕП</h1>
+                <div class="text-success">Робоче місце диспетчера</div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(errorMessage))
+            {
+                <div class="alert alert-danger" role="alert">@errorMessage</div>
+            }
+
+            <EditForm Model="model" OnValidSubmit="SubmitLogin">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Логін</label>
+                    <InputText class="form-control" autocomplete="username" @bind-Value="model.UserName" />
+                </div>
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Пароль</label>
+                    <InputText class="form-control" type="password" autocomplete="current-password" @bind-Value="model.Password" />
+                </div>
+                <button class="btn btn-primary w-100" type="submit" disabled="@isSubmitting">
+                    @(isSubmitting ? "Вхід…" : "Увійти")
+                </button>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
+    private readonly LoginRequest model = new();
+    private bool isSubmitting;
+    private string errorMessage = "";
+
+    private async Task SubmitLogin()
+    {
+        if (string.IsNullOrWhiteSpace(model.UserName) || string.IsNullOrWhiteSpace(model.Password))
+        {
+            errorMessage = "Введіть логін і пароль.";
+            return;
+        }
+
+        isSubmitting = true;
+        errorMessage = "";
+        try
+        {
+            using var response = await Authentication.LoginAsync(model);
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = await ReadMessage(response);
+                return;
+            }
+
+            var destination = !string.IsNullOrWhiteSpace(ReturnUrl) && ReturnUrl.StartsWith('/')
+                ? ReturnUrl
+                : "/";
+            Navigation.NavigateTo(destination, replace: true);
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося з’єднатися із сервером. Повторіть спробу.";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private static async Task<string> ReadMessage(HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+        try
+        {
+            using var json = JsonDocument.Parse(content);
+            if (json.RootElement.TryGetProperty("message", out var message) ||
+                json.RootElement.TryGetProperty("Message", out message))
+                return message.GetString() ?? "Не вдалося виконати вхід.";
+        }
+        catch (JsonException)
+        {
+        }
+
+        return "Неправильний логін або пароль.";
+    }
+}

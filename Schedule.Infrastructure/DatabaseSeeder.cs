@@ -12,6 +12,7 @@ public static class DatabaseSeeder
 
         try
         {
+            SeedApplicationUsers(connection, transaction);
             SeedReferenceData(connection, transaction);
             SeedAcademicData(connection, transaction);
             SeedBaseSchedule(connection, transaction);
@@ -24,6 +25,40 @@ public static class DatabaseSeeder
             transaction.Rollback();
             throw;
         }
+    }
+
+    private static void SeedApplicationUsers(
+        IDbConnection connection,
+        IDbTransaction transaction)
+    {
+        const string sql = """
+            INSERT IGNORE INTO `ApplicationUsers`
+                (`UserName`, `DisplayName`, `PasswordHash`, `Role`, `IsActive`)
+            VALUES
+                (
+                    'admin',
+                    'Адміністратор',
+                    'pbkdf2-sha256.210000.scHGbBUZaNDhwhQNfpjcCQ==.2hTjL7mZ+D5PV+kh5lJBOfwZkovddVRNDpSqUCsaHbk=',
+                    'Administrator',
+                    TRUE
+                ),
+                (
+                    'dispatcher1',
+                    'Диспетчер 1',
+                    'pbkdf2-sha256.210000.VeFCVLday4RrdKCQLs8v+g==.EV6GU8ByqRCpQ144mDbK45UzGRTWAjNvfQQ7LK+XwlQ=',
+                    'Dispatcher',
+                    TRUE
+                ),
+                (
+                    'dispatcher2',
+                    'Диспетчер 2',
+                    'pbkdf2-sha256.210000.lCaRYjEbWU/otpW+YT1vXQ==.02AvvWP6Kj6K3TABuxt2fTx1UYr7L8RadwPhq41Js0s=',
+                    'Dispatcher',
+                    TRUE
+                );
+            """;
+
+        connection.Execute(sql, transaction: transaction);
     }
 
     private static void SeedReferenceData(

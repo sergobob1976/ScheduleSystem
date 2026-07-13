@@ -35,6 +35,23 @@ public class DatabaseInitializer
         IDbConnection connection)
     {
         const string sql = """
+            CREATE TABLE IF NOT EXISTS `ApplicationUsers`
+            (
+                `Id` INT AUTO_INCREMENT PRIMARY KEY,
+                `UserName` VARCHAR(50) NOT NULL,
+                `DisplayName` VARCHAR(100) NOT NULL,
+                `PasswordHash` VARCHAR(255) NOT NULL,
+                `Role` VARCHAR(30) NOT NULL,
+                `IsActive` BOOLEAN NOT NULL DEFAULT TRUE,
+
+                UNIQUE KEY `UX_ApplicationUsers_UserName` (`UserName`),
+                CHECK (`Role` IN ('Administrator', 'Dispatcher'))
+            )
+            ENGINE=InnoDB
+            DEFAULT CHARSET=utf8mb4
+            COLLATE=utf8mb4_unicode_ci;
+
+
             CREATE TABLE IF NOT EXISTS `Groups`
             (
                 `Id` INT AUTO_INCREMENT PRIMARY KEY,

@@ -79,6 +79,26 @@ code {
     color: #c02d76;
 }
 
+.login-page {
+    align-items: center;
+    background: linear-gradient(135deg, #eef5ff 0%, #f3fbf7 100%);
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+}
+
+.login-card {
+    max-width: 430px;
+    width: 100%;
+}
+
+.login-logo {
+    height: 5rem;
+    object-fit: contain;
+    width: auto;
+}
+
 .home-hero {
     container-type: inline-size;
 }
