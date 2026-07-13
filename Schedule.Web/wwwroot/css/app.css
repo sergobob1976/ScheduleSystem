@@ -79,11 +79,35 @@ code {
     color: #c02d76;
 }
 
+.home-hero {
+    container-type: inline-size;
+}
+
+.home-hero-title {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    overflow: hidden;
+}
+
 .home-hero-logo {
-    display: block;
-    width: min(100%, 300px);
-    height: auto;
-    margin-inline: auto;
+    flex: 0 0 auto;
+    width: auto;
+    height: 3rem;
+    margin-left: -0.825rem;
+    margin-right: -0.5175rem;
+}
+
+.home-hero-heading {
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: clamp(0.875rem, 1.6vw, 2rem);
+    font-size: clamp(0.4rem, 2.05cqw, 2rem);
+    font-weight: 400;
+    line-height: 1.2;
+    text-align: left;
+    white-space: nowrap;
 }
 
 .form-floating > .form-control-plaintext::placeholder, .form-floating > .form-control::placeholder {
@@ -98,6 +122,69 @@ code {
 .schedule-grid { min-width: 1100px; }
 .schedule-grid th { white-space: nowrap; }
 .schedule-cell { min-width: 145px; height: 92px; vertical-align: top; background: #fff; }
+.real-schedule-grid {
+    min-width: 1550px;
+}
+
+.real-schedule-position-header,
+.real-schedule-position {
+    background: #e9ecef !important;
+    width: 4.5rem;
+}
+
+.real-schedule-day-header {
+    background: #dbeafe !important;
+    border-bottom: 3px solid #0d6efd !important;
+    color: #0a3d78 !important;
+    min-width: 210px;
+}
+
+.real-schedule-cell {
+    background: #f8f9fa;
+    min-width: 210px;
+    padding: .5rem !important;
+}
+
+.real-schedule-empty {
+    color: #adb5bd;
+    display: block;
+    padding: .75rem 0;
+    text-align: center;
+}
+
+.real-lesson-card {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-left-width: 5px;
+    border-radius: .375rem;
+    box-shadow: 0 .125rem .25rem rgba(0, 0, 0, .075);
+    padding: .65rem;
+}
+
+.real-lesson-card + .real-lesson-card {
+    margin-top: .5rem;
+}
+
+.real-lesson-group {
+    font-size: .8rem;
+    font-weight: 700;
+    letter-spacing: .03em;
+    margin-bottom: .25rem;
+    text-transform: uppercase;
+}
+
+.real-group-color-0 { border-left-color: #0d6efd; background: #f5f9ff; }
+.real-group-color-0 .real-lesson-group { color: #0a58ca; }
+.real-group-color-1 { border-left-color: #198754; background: #f3fbf7; }
+.real-group-color-1 .real-lesson-group { color: #146c43; }
+.real-group-color-2 { border-left-color: #fd7e14; background: #fff8f2; }
+.real-group-color-2 .real-lesson-group { color: #b45309; }
+.real-group-color-3 { border-left-color: #6f42c1; background: #f8f5fd; }
+.real-group-color-3 .real-lesson-group { color: #59359a; }
+.real-group-color-4 { border-left-color: #0dcaf0; background: #f2fcfe; }
+.real-group-color-4 .real-lesson-group { color: #087990; }
+.real-group-color-5 { border-left-color: #d63384; background: #fff5fa; }
+.real-group-color-5 .real-lesson-group { color: #ab296a; }
 .status-select { min-width: 135px; font-weight: 600; }
 .crud-form-column,
 .crud-data-column {

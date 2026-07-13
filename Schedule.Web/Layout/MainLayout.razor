@@ -4,9 +4,15 @@
 <div class="container-fluid">
     <div class="row">
         <div class="col-md-3 col-lg-2 bg-dark p-3 text-white sidebar-panel">
-            <h5 class="text-center mb-4 border-bottom pb-2">
-                📅 Розклад ЧКФКЕП
-            </h5>
+            <div class="sidebar-heading text-center mb-4 border-bottom pb-2">
+                <div class="sidebar-brand">
+                    <span class="sidebar-brand-icon" aria-hidden="true">📅</span>
+                    <div class="sidebar-brand-text">
+                        <h5 class="mb-1">Розклад ЧКФКЕП</h5>
+                        <div class="dispatcher-workplace">Робоче місце диспетчера</div>
+                    </div>
+                </div>
+            </div>
 
             <ul class="nav nav-pills flex-column mb-auto">
                 <li class="nav-item mb-2">
@@ -89,6 +95,28 @@
     .nav-link.active {
         background-color: #0d6efd !important;
         color: white !important;
+    }
+
+    .dispatcher-workplace {
+        color: #75b798;
+        font-size: .75rem;
+        letter-spacing: .025em;
+    }
+
+    .sidebar-brand {
+        align-items: flex-start;
+        display: inline-flex;
+        gap: .4rem;
+        text-align: left;
+    }
+
+    .sidebar-brand-icon {
+        flex: 0 0 auto;
+        line-height: 1.5;
+    }
+
+    .sidebar-brand-text {
+        min-width: 0;
     }
 
     .nav-link:hover:not(.active) {

@@ -58,19 +58,104 @@
     </div></div></div>
 }
 
-<div class="card shadow-sm"><div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2"><strong>Заняття вибраного тижня</strong><div class="d-flex flex-wrap gap-2"><span class="badge bg-primary">Усього: @lessons.Count</span><span class="badge bg-secondary">Заплановано: @PlannedLessonCount</span><span class="badge bg-success">Проведено: @CompletedLessonCount</span><span class="badge bg-danger">Скасовано: @CancelledLessonCount</span></div></div>
-<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead class="table-light"><tr><th>Дата</th><th>Пара</th><th>Група</th><th>Дисципліна</th><th>Тип</th><th>Викладач</th><th>Аудиторія</th><th>Стан</th><th>Дії</th></tr></thead>
-<tbody>@if (isLoadingSchedule) { <tr><td colspan="9" class="text-center text-muted py-4">Завантаження…</td></tr> }
-else if (lessons.Count == 0) { <tr><td colspan="9" class="text-center text-muted py-4">Занять немає.</td></tr> }
-else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM.yyyy")<div class="small text-muted">@GetDayName(item.WeekDay)</div></td><td>@item.LessonPosition</td><td>@item.Group?.Name</td><td>@item.Discipline?.Name
-    @if (!string.IsNullOrWhiteSpace(item.ResourceLink)) { <div><a class="small" href="@item.ResourceLink" target="_blank" rel="noopener noreferrer">Матеріали</a></div> }
-</td><td>@GetLessonTypeName(item.LessonType)</td><td>@item.Teacher?.Name
-    @if (!string.IsNullOrWhiteSpace(item.ConferenceLink)) { <div><a class="small" href="@item.ConferenceLink" target="_blank" rel="noopener noreferrer">Конференція</a></div> }
-</td><td>@(item.ClassRoom?.Name ?? "—")</td><td>
-    <select class="form-select form-select-sm status-select @GetStatusClass(item.Status)" disabled="@isChangingStatus" value="@((int)item.Status)" @onchange="args => ChangeStatus(item, args)">
-        <option value="0">Заплановано</option><option value="1">Проведено</option><option value="2">Скасовано</option>
-    </select>
-</td><td><div class="d-flex gap-1"><button class="btn btn-sm btn-outline-primary" disabled="@(deletingLessonId > 0)" @onclick="() => EditLesson(item)">Редагувати</button><button class="btn btn-sm btn-outline-danger" disabled="@(deletingLessonId > 0)" @onclick="() => DeleteLesson(item.Id)">@(deletingLessonId == item.Id ? "Видалення…" : "Видалити")</button></div></td></tr> } }</tbody></table></div></div>
+<div class="card shadow-sm">
+    <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <strong>Заняття вибраного тижня</strong>
+        <div class="d-flex flex-wrap gap-2">
+            <span class="badge bg-primary">Усього: @lessons.Count</span>
+            <span class="badge bg-secondary">Заплановано: @PlannedLessonCount</span>
+            <span class="badge bg-success">Проведено: @CompletedLessonCount</span>
+            <span class="badge bg-danger">Скасовано: @CancelledLessonCount</span>
+        </div>
+    </div>
+    @if (isLoadingSchedule)
+    {
+        <div class="text-center text-muted py-4">Завантаження…</div>
+    }
+    else if (SelectedWeek is null)
+    {
+        <div class="text-center text-muted py-4">Оберіть календарний тиждень.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-bordered align-middle mb-0 schedule-grid real-schedule-grid">
+                <thead>
+                    <tr>
+                        <th class="real-schedule-position-header text-center">Пара</th>
+                        @foreach (var date in DisplayedWeekDates)
+                        {
+                            <th class="real-schedule-day-header text-center">
+                                <div>@GetDayName(ConvertToWeekDay(date))</div>
+                                <div class="small fw-normal">@date.ToString("dd.MM.yyyy")</div>
+                            </th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var position = 1; position <= 8; position++)
+                    {
+                        var currentPosition = position;
+                        <tr>
+                            <th class="real-schedule-position text-center">@currentPosition</th>
+                            @foreach (var date in DisplayedWeekDates)
+                            {
+                                var cellLessons = GetLessons(date, currentPosition).ToList();
+                                <td class="schedule-cell real-schedule-cell">
+                                    @if (cellLessons.Count == 0)
+                                    {
+                                        <span class="real-schedule-empty">—</span>
+                                    }
+                                    else
+                                    {
+                                        @foreach (var item in cellLessons)
+                                        {
+                                            <article class="real-lesson-card @GetGroupCardClass(item.GroupId)">
+                                                <div class="real-lesson-group">@(item.Group?.Name ?? "Групу не вказано")</div>
+                                                <div class="fw-semibold">@(item.Discipline?.Name ?? "Дисципліну не вказано")</div>
+                                                <div class="small">@item.Teacher?.Name</div>
+                                                <div class="d-flex flex-wrap gap-1 mt-1">
+                                                    <span class="badge bg-secondary">@GetLessonTypeName(item.LessonType)</span>
+                                                    <span class="badge bg-light text-dark border">@(item.ClassRoom?.Name ?? "Без аудиторії")</span>
+                                                </div>
+                                                @if (!string.IsNullOrWhiteSpace(item.ResourceLink) || !string.IsNullOrWhiteSpace(item.ConferenceLink))
+                                                {
+                                                    <div class="d-flex flex-wrap gap-2 mt-1 small">
+                                                        @if (!string.IsNullOrWhiteSpace(item.ResourceLink))
+                                                        {
+                                                            <a href="@item.ResourceLink" target="_blank" rel="noopener noreferrer">Матеріали</a>
+                                                        }
+                                                        @if (!string.IsNullOrWhiteSpace(item.ConferenceLink))
+                                                        {
+                                                            <a href="@item.ConferenceLink" target="_blank" rel="noopener noreferrer">Конференція</a>
+                                                        }
+                                                    </div>
+                                                }
+                                                <select class="form-select form-select-sm status-select w-100 mt-2 @GetStatusClass(item.Status)"
+                                                        aria-label="Стан заняття групи @(item.Group?.Name)"
+                                                        disabled="@isChangingStatus"
+                                                        value="@((int)item.Status)"
+                                                        @onchange="args => ChangeStatus(item, args)">
+                                                    <option value="0">Заплановано</option>
+                                                    <option value="1">Проведено</option>
+                                                    <option value="2">Скасовано</option>
+                                                </select>
+                                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                                    <button class="btn btn-sm btn-outline-primary" disabled="@(deletingLessonId > 0)" @onclick="() => EditLesson(item)">Редагувати</button>
+                                                    <button class="btn btn-sm btn-outline-danger" disabled="@(deletingLessonId > 0)" @onclick="() => DeleteLesson(item.Id)">@(deletingLessonId == item.Id ? "Видалення…" : "Видалити")</button>
+                                                </div>
+                                            </article>
+                                        }
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
 
 <div class="card shadow-sm mt-4"><div class="card-header bg-white"><strong>Фактична вичитка годин</strong></div><div class="card-body"><div class="row g-3 align-items-end">
     <div class="col-md-5"><label class="form-label fw-bold">Група</label><select class="form-select" @bind="reportGroupId" @bind:after="ClearGroupReport"><option value="0">Оберіть групу</option>@foreach(var group in AvailableGroups){<option value="@group.Id">@group.Name</option>}</select></div>
@@ -140,6 +225,26 @@ else { @foreach (var item in lessons) { <tr><td>@item.LessonDate.ToString("dd.MM
     private int PlannedLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Planned);
     private int CompletedLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Completed);
     private int CancelledLessonCount => lessons.Count(x => x.Status == RealLessonStatus.Cancelled);
+    private IEnumerable<DateTime> DisplayedWeekDates
+    {
+        get
+        {
+            var week = SelectedWeek;
+            if (week is null) return [];
+
+            var dayCount = (week.ActiveEndDate.Date - week.ActiveStartDate.Date).Days + 1;
+            return Enumerable.Range(0, Math.Max(0, dayCount))
+                .Select(offset => week.ActiveStartDate.Date.AddDays(offset));
+        }
+    }
+
+    private IEnumerable<RealLesson> GetLessons(DateTime date, int lessonPosition) =>
+        lessons
+            .Where(item => item.LessonDate.Date == date.Date && item.LessonPosition == lessonPosition)
+            .OrderBy(item => item.Group?.Name)
+            .ThenBy(item => item.Discipline?.Name);
+
+    private static string GetGroupCardClass(int groupId) => $"real-group-color-{(groupId & int.MaxValue) % 6}";
 
     protected override async Task OnInitializedAsync()
     {
