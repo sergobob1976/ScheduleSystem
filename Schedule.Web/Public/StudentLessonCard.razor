@@ -1,0 +1,36 @@
+@using Schedule.Core.DTOs
+@using Schedule.Core.Enums
+
+<div class="student-lesson-card @(Lesson.Status == RealLessonStatus.Cancelled ? "student-lesson-cancelled" : "")">
+    @if (Lesson.Status == RealLessonStatus.Cancelled)
+    {
+        <span class="badge bg-danger mb-1">Скасовано</span>
+    }
+    <div class="fw-semibold">@Lesson.DisciplineName</div>
+    <div class="small text-muted">@Lesson.TeacherName</div>
+    <div class="d-flex flex-wrap gap-1 mt-1">
+        <span class="badge bg-secondary">@Lesson.LessonTypeName</span>
+        @if (!string.IsNullOrWhiteSpace(Lesson.ClassRoomName))
+        {
+            <span class="badge bg-light text-dark border">@Lesson.ClassRoomName</span>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Lesson.ConferenceLink) || !string.IsNullOrWhiteSpace(Lesson.ResourceLink))
+    {
+        <div class="d-flex flex-wrap gap-2 mt-2">
+            @if (!string.IsNullOrWhiteSpace(Lesson.ConferenceLink))
+            {
+                <a class="btn btn-sm btn-outline-primary" href="@Lesson.ConferenceLink" target="_blank" rel="noopener noreferrer">Конференція</a>
+            }
+            @if (!string.IsNullOrWhiteSpace(Lesson.ResourceLink))
+            {
+                <a class="btn btn-sm btn-outline-secondary" href="@Lesson.ResourceLink" target="_blank" rel="noopener noreferrer">Матеріали</a>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public StudentScheduleLessonResponse Lesson { get; set; } = default!;
+}
