@@ -88,6 +88,17 @@ code {
     padding: 1rem;
 }
 
+.authentication-checking {
+    align-items: center;
+    background: linear-gradient(135deg, #eef5ff 0%, #f3fbf7 100%);
+    color: #6c757d;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    justify-content: center;
+    min-height: 100vh;
+}
+
 .login-card {
     max-width: 430px;
     width: 100%;

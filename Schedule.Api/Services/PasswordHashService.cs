@@ -4,6 +4,21 @@ namespace Schedule.Api.Services;
 
 public class PasswordHashService
 {
+    private const int Iterations = 210_000;
+
+    public string Hash(string password)
+    {
+        var salt = RandomNumberGenerator.GetBytes(16);
+        var hash = Rfc2898DeriveBytes.Pbkdf2(
+            password,
+            salt,
+            Iterations,
+            HashAlgorithmName.SHA256,
+            32);
+
+        return $"pbkdf2-sha256.{Iterations}.{Convert.ToBase64String(salt)}.{Convert.ToBase64String(hash)}";
+    }
+
     public bool Verify(string password, string encodedHash)
     {
         try

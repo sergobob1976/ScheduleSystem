@@ -13,3 +13,17 @@ public class AuthenticatedUserResponse
     public required string DisplayName { get; set; }
     public required string Role { get; set; }
 }
+
+public class ApplicationUserSummaryResponse
+{
+    public int Id { get; set; }
+    public required string UserName { get; set; }
+    public required string DisplayName { get; set; }
+    public required string Role { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public class ChangeUserPasswordRequest
+{
+    public string NewPassword { get; set; } = "";
+}

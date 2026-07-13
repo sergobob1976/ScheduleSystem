@@ -1,0 +1,187 @@
+@page "/application-users"
+@attribute [Authorize(Roles = "Administrator")]
+@using System.Text.Json
+@using Schedule.Core.DTOs
+@inject HttpClient Http
+
+<h1 class="h3 mb-3">Користувачі</h1>
+<p class="text-muted">Зміна паролів адміністратора та диспетчерів.</p>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success d-flex justify-content-between align-items-center gap-3">
+        <span>@successMessage</span>
+        <button type="button" class="btn btn-sm btn-success" @onclick="() => successMessage = string.Empty">ОК</button>
+    </div>
+}
+
+@if (selectedUser is not null)
+{
+    <div class="card border-primary shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            Новий пароль: @selectedUser.DisplayName
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Новий пароль</label>
+                    <InputText class="form-control" type="password" autocomplete="new-password" @bind-Value="newPassword" />
+                    <div class="form-text">Щонайменше 12 символів, одна літера та одна цифра.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Підтвердження пароля</label>
+                    <InputText class="form-control" type="password" autocomplete="new-password" @bind-Value="passwordConfirmation" />
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="button" class="btn btn-primary" disabled="@isSaving" @onclick="SavePassword">
+                        @(isSaving ? "Збереження…" : "Змінити пароль")
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" disabled="@isSaving" @onclick="CloseEditor">Скасувати</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white"><strong>Облікові записи</strong></div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr><th>Користувач</th><th>Логін</th><th>Роль</th><th>Стан</th><th></th></tr>
+            </thead>
+            <tbody>
+                @if (isLoading)
+                {
+                    <tr><td colspan="5" class="text-center text-muted py-4">Завантаження…</td></tr>
+                }
+                else
+                {
+                    @foreach (var user in users)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@user.DisplayName</td>
+                            <td><code>@user.UserName</code></td>
+                            <td>@GetRoleName(user.Role)</td>
+                            <td><span class="badge @(user.IsActive ? "bg-success" : "bg-secondary")">@(user.IsActive ? "Активний" : "Вимкнений")</span></td>
+                            <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditor(user)">Змінити пароль</button></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    private List<ApplicationUserSummaryResponse> users = [];
+    private ApplicationUserSummaryResponse? selectedUser;
+    private string newPassword = "";
+    private string passwordConfirmation = "";
+    private string errorMessage = "";
+    private string successMessage = "";
+    private bool isLoading;
+    private bool isSaving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            users = await Http.GetFromJsonAsync<List<ApplicationUserSummaryResponse>>("api/application-users") ?? [];
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося завантажити користувачів. Перевірте з’єднання із сервером.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OpenEditor(ApplicationUserSummaryResponse user)
+    {
+        selectedUser = user;
+        newPassword = "";
+        passwordConfirmation = "";
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private void CloseEditor()
+    {
+        selectedUser = null;
+        newPassword = "";
+        passwordConfirmation = "";
+    }
+
+    private async Task SavePassword()
+    {
+        if (selectedUser is null) return;
+        if (newPassword.Length < 12)
+        {
+            errorMessage = "Пароль повинен містити щонайменше 12 символів.";
+            return;
+        }
+        if (!newPassword.Any(char.IsLetter) || !newPassword.Any(char.IsDigit))
+        {
+            errorMessage = "Пароль повинен містити хоча б одну літеру та одну цифру.";
+            return;
+        }
+        if (newPassword != passwordConfirmation)
+        {
+            errorMessage = "Пароль і підтвердження не збігаються.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var response = await Http.PatchAsJsonAsync(
+                $"api/application-users/{selectedUser.Id}/password",
+                new ChangeUserPasswordRequest { NewPassword = newPassword });
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = await ReadMessage(response);
+                return;
+            }
+
+            var displayName = selectedUser.DisplayName;
+            CloseEditor();
+            successMessage = $"Пароль користувача «{displayName}» успішно змінено.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося змінити пароль. Перевірте з’єднання із сервером.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private static async Task<string> ReadMessage(HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+        try
+        {
+            using var json = JsonDocument.Parse(content);
+            if (json.RootElement.TryGetProperty("message", out var message) ||
+                json.RootElement.TryGetProperty("Message", out message))
+                return message.GetString() ?? "Не вдалося змінити пароль.";
+        }
+        catch (JsonException)
+        {
+        }
+        return "Не вдалося змінити пароль.";
+    }
+
+    private static string GetRoleName(string role) => role == "Administrator" ? "Адміністратор" : "Диспетчер";
+}

@@ -10,10 +10,16 @@ public class CookieAuthenticationStateProvider : AuthenticationStateProvider
 {
     private static readonly ClaimsPrincipal Anonymous = new(new ClaimsIdentity());
     private readonly HttpClient _http;
+    private Task<AuthenticationState>? _authenticationStateTask;
 
     public CookieAuthenticationStateProvider(HttpClient http) => _http = http;
 
-    public override async Task<AuthenticationState> GetAuthenticationStateAsync()
+    public override Task<AuthenticationState> GetAuthenticationStateAsync()
+    {
+        return _authenticationStateTask ??= LoadAuthenticationStateAsync();
+    }
+
+    private async Task<AuthenticationState> LoadAuthenticationStateAsync()
     {
         try
         {
@@ -35,14 +41,23 @@ public class CookieAuthenticationStateProvider : AuthenticationStateProvider
     {
         var response = await _http.PostAsJsonAsync("api/authentication/login", request);
         if (response.IsSuccessStatusCode)
-            NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
+        {
+            var user = await response.Content.ReadFromJsonAsync<AuthenticatedUserResponse>();
+            SetAuthenticationState(user is null ? Anonymous : CreatePrincipal(user));
+        }
         return response;
     }
 
     public async Task LogoutAsync()
     {
         await _http.PostAsync("api/authentication/logout", null);
-        NotifyAuthenticationStateChanged(Task.FromResult(new AuthenticationState(Anonymous)));
+        SetAuthenticationState(Anonymous);
+    }
+
+    private void SetAuthenticationState(ClaimsPrincipal principal)
+    {
+        _authenticationStateTask = Task.FromResult(new AuthenticationState(principal));
+        NotifyAuthenticationStateChanged(_authenticationStateTask);
     }
 
     private static ClaimsPrincipal CreatePrincipal(AuthenticatedUserResponse user)

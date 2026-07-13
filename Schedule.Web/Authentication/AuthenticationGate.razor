@@ -1,0 +1,26 @@
+@inject CookieAuthenticationStateProvider Authentication
+
+@if (isAuthenticationChecked)
+{
+    @ChildContent
+}
+else
+{
+    <div class="authentication-checking" role="status" aria-live="polite">
+        <div class="spinner-border text-primary" aria-hidden="true"></div>
+        <div>Перевірка доступу…</div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    private bool isAuthenticationChecked;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Authentication.GetAuthenticationStateAsync();
+        isAuthenticationChecked = true;
+    }
+}
