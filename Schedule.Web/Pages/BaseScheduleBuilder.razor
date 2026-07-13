@@ -12,15 +12,14 @@
 
 <div class="card shadow-sm mb-4"><div class="card-body">
     <div class="row g-3 align-items-end">
-        <div class="col-md-5"><label class="form-label fw-bold">Семестр</label>
+        <div class="col-md-6"><label class="form-label fw-bold">Семестр</label>
             <select class="form-select" @bind="semesterId" @bind:after="ChangeSemester"><option value="0">Оберіть семестр</option>
                 @foreach (var item in semesters) { <option value="@item.Id">@item.Name</option> }
             </select></div>
-        <div class="col-md-5"><label class="form-label fw-bold">Група</label>
-            <select class="form-select" @bind="groupId" @bind:after="ChangeGroup"><option value="0">Оберіть групу</option>
+        <div class="col-md-6"><label class="form-label fw-bold">Група</label>
+            <select class="form-select" disabled="@isLoading" @bind="groupId" @bind:after="ChangeGroup"><option value="0">Оберіть групу</option>
                 @foreach (var item in AvailableGroups) { <option value="@item.Id">@item.Name</option> }
             </select></div>
-        <div class="col-md-2"><button class="btn btn-primary w-100" @onclick="LoadBuilder" disabled="@isLoading">@(isLoading ? "Завантаження…" : "Показати")</button></div>
     </div>
 </div></div>
 
@@ -234,7 +233,14 @@ else if (data is not null)
         ResetBuilderState();
     }
 
-    private void ChangeGroup() => ResetBuilderState();
+    private async Task ChangeGroup()
+    {
+        ResetBuilderState();
+        if (semesterId > 0 && groupId > 0)
+        {
+            await LoadBuilder();
+        }
+    }
 
     private void ResetBuilderState()
     {
