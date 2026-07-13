@@ -1,0 +1,236 @@
+@using System.Text.Json
+@using Schedule.Core.DTOs
+@using Schedule.Core.Enums
+@inject HttpClient Http
+@inject CookieAuthenticationStateProvider Authentication
+@inject NavigationManager Navigation
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h1 class="h3 mb-1">Мій розклад</h1>
+        <div class="text-muted">@options.TeacherName</div>
+    </div>
+    <button type="button" class="btn btn-outline-secondary" @onclick="Logout">Вийти</button>
+</div>
+
+<div class="card shadow-sm mb-4"><div class="card-body"><div class="row g-3 align-items-end">
+    <div class="col-md-5"><label class="form-label fw-bold">Семестр</label><select class="form-select" @bind="semesterId" @bind:after="ChangeSemester">
+        @foreach (var semester in options.Semesters) { <option value="@semester.Id">@semester.Name</option> }
+    </select></div>
+    <div class="col-md-7"><label class="form-label fw-bold">Календарний тиждень</label><select class="form-select" @bind="weekStart" @bind:after="LoadSchedule">
+        @foreach (var week in SelectedSemester?.Weeks ?? []) { <option value="@week.WeekStartDate.ToString("yyyy-MM-dd")">@week.ActiveStartDate.ToString("dd.MM")–@week.ActiveEndDate.ToString("dd.MM.yyyy")</option> }
+    </select></div>
+</div></div></div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+@if (!string.IsNullOrWhiteSpace(successMessage))
+{
+    <div class="alert alert-success d-flex justify-content-between align-items-center gap-3">
+        <span>@successMessage</span><button type="button" class="btn btn-sm btn-success" @onclick="() => successMessage = string.Empty">ОК</button>
+    </div>
+}
+
+@if (editingLesson is not null)
+{
+    <div class="card border-success shadow-sm mb-4">
+        <div class="card-header bg-success text-white">Посилання: @editingLesson.DisciplineName · @editingLesson.GroupName</div>
+        <div class="card-body"><div class="row g-3">
+            <div class="col-md-6"><label class="form-label fw-bold">Посилання на конференцію</label><input class="form-control" type="url" placeholder="https://..." @bind="conferenceLink" /></div>
+            <div class="col-md-6"><label class="form-label fw-bold">Посилання на матеріали</label><input class="form-control" type="url" placeholder="https://..." @bind="resourceLink" /></div>
+            <div class="col-12 d-flex gap-2">
+                <button type="button" class="btn btn-success" disabled="@isSaving" @onclick="SaveLinks">@(isSaving ? "Збереження…" : "Зберегти")</button>
+                <button type="button" class="btn btn-outline-secondary" disabled="@isSaving" @onclick="CloseEditor">Скасувати</button>
+            </div>
+        </div></div>
+    </div>
+}
+
+@if (isLoading)
+{
+    <div class="text-center text-muted py-5"><div class="spinner-border text-primary mb-3"></div><div>Завантаження розкладу…</div></div>
+}
+else if (lessons.Count == 0)
+{
+    <div class="card border-0 shadow-sm"><div class="card-body text-center text-muted py-5">На обраний тиждень занять немає.</div></div>
+}
+else
+{
+    <div class="card shadow-sm d-none d-lg-block"><div class="table-responsive">
+        <table class="table table-bordered align-middle mb-0 schedule-grid student-schedule-grid"><thead><tr><th class="text-center table-light">Пара</th>
+            @foreach (var date in DisplayedDates) { <th class="student-day-header text-center"><div>@GetDayName(date)</div><div class="small fw-normal">@date.ToString("dd.MM.yyyy")</div></th> }
+        </tr></thead><tbody>
+            @for (var position = 1; position <= 8; position++)
+            {
+                var currentPosition = position;
+                <tr><th class="text-center table-light">@currentPosition</th>
+                    @foreach (var date in DisplayedDates)
+                    {
+                        var lesson = GetLesson(date, currentPosition);
+                        <td class="schedule-cell student-schedule-cell">
+                            @if (lesson is not null) { <TeacherLessonCard Lesson="lesson" EditLinks="OpenEditor" /> }
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody></table>
+    </div></div>
+
+    <div class="d-lg-none">
+        @foreach (var date in DisplayedDates)
+        {
+            var dayLessons = lessons.Where(item => item.LessonDate.Date == date.Date).OrderBy(item => item.LessonPosition).ToList();
+            <section class="card shadow-sm mb-3 overflow-hidden">
+                <div class="student-mobile-day-header"><strong>@GetDayName(date)</strong><span>@date.ToString("dd.MM.yyyy")</span></div>
+                <div class="card-body p-2">
+                    @if (dayLessons.Count == 0) { <div class="text-muted text-center py-3">Занять немає.</div> }
+                    else
+                    {
+                        @foreach (var lesson in dayLessons)
+                        {
+                            <div class="student-mobile-lesson @(lesson.Status == RealLessonStatus.Cancelled ? "student-lesson-cancelled" : "")">
+                                <div class="student-mobile-position">@lesson.LessonPosition пара</div>
+                                <TeacherLessonCard Lesson="lesson" EditLinks="OpenEditor" />
+                            </div>
+                        }
+                    }
+                </div>
+            </section>
+        }
+    </div>
+}
+
+@code {
+    private TeacherScheduleOptionsResponse options = new() { TeacherName = "Викладач" };
+    private List<TeacherScheduleLessonResponse> lessons = [];
+    private TeacherScheduleLessonResponse? editingLesson;
+    private int semesterId;
+    private string weekStart = "";
+    private string conferenceLink = "";
+    private string resourceLink = "";
+    private string errorMessage = "";
+    private string successMessage = "";
+    private bool isLoading;
+    private bool isSaving;
+
+    private TeacherScheduleSemesterOption? SelectedSemester => options.Semesters.FirstOrDefault(item => item.Id == semesterId);
+    private StudentScheduleWeekOption? SelectedWeek => SelectedSemester?.Weeks.FirstOrDefault(item => item.WeekStartDate.ToString("yyyy-MM-dd") == weekStart);
+    private IEnumerable<DateTime> DisplayedDates => SelectedWeek is null ? [] : Enumerable.Range(0, (SelectedWeek.ActiveEndDate.Date - SelectedWeek.ActiveStartDate.Date).Days + 1).Select(offset => SelectedWeek.ActiveStartDate.Date.AddDays(offset));
+
+    protected override async Task OnInitializedAsync()
+    {
+        isLoading = true;
+        try
+        {
+            options = await Http.GetFromJsonAsync<TeacherScheduleOptionsResponse>("api/teacher-schedule/options") ?? options;
+            SelectDefaultSemesterAndWeek();
+            await LoadSchedule();
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося завантажити розклад викладача. Повторіть спробу пізніше.";
+        }
+        finally { isLoading = false; }
+    }
+
+    private async Task ChangeSemester()
+    {
+        CloseEditor();
+        SelectDefaultWeek();
+        await LoadSchedule();
+    }
+
+    private void SelectDefaultSemesterAndWeek()
+    {
+        var today = DateTime.Today;
+        var semester = options.Semesters.FirstOrDefault(item => item.StartDate.Date <= today && item.EndDate.Date >= today)
+            ?? options.Semesters.Where(item => item.StartDate.Date > today).OrderBy(item => item.StartDate).FirstOrDefault()
+            ?? options.Semesters.OrderByDescending(item => item.EndDate).FirstOrDefault();
+        semesterId = semester?.Id ?? 0;
+        SelectDefaultWeek();
+    }
+
+    private void SelectDefaultWeek()
+    {
+        var today = DateTime.Today;
+        var week = SelectedSemester?.Weeks.FirstOrDefault(item => item.ActiveStartDate.Date <= today && item.ActiveEndDate.Date >= today)
+            ?? SelectedSemester?.Weeks.Where(item => item.ActiveStartDate.Date > today).OrderBy(item => item.ActiveStartDate).FirstOrDefault()
+            ?? SelectedSemester?.Weeks.OrderByDescending(item => item.ActiveEndDate).FirstOrDefault();
+        weekStart = week?.WeekStartDate.ToString("yyyy-MM-dd") ?? "";
+    }
+
+    private async Task LoadSchedule()
+    {
+        CloseEditor();
+        lessons = [];
+        errorMessage = "";
+        if (semesterId <= 0 || string.IsNullOrWhiteSpace(weekStart)) return;
+        isLoading = true;
+        try
+        {
+            lessons = await Http.GetFromJsonAsync<List<TeacherScheduleLessonResponse>>($"api/teacher-schedule/semester/{semesterId}/week/{weekStart}") ?? [];
+        }
+        catch (HttpRequestException) { errorMessage = "Не вдалося завантажити розклад. Повторіть спробу пізніше."; }
+        finally { isLoading = false; }
+    }
+
+    private void OpenEditor(TeacherScheduleLessonResponse lesson)
+    {
+        editingLesson = lesson;
+        conferenceLink = lesson.ConferenceLink ?? "";
+        resourceLink = lesson.ResourceLink ?? "";
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private void CloseEditor()
+    {
+        editingLesson = null;
+        conferenceLink = "";
+        resourceLink = "";
+    }
+
+    private async Task SaveLinks()
+    {
+        if (editingLesson is null) return;
+        isSaving = true;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var response = await Http.PatchAsJsonAsync($"api/teacher-schedule/lessons/{editingLesson.Id}/links", new UpdateTeacherLessonLinksRequest { ConferenceLink = conferenceLink, ResourceLink = resourceLink });
+            if (!response.IsSuccessStatusCode) { errorMessage = await ReadMessage(response); return; }
+            editingLesson.ConferenceLink = string.IsNullOrWhiteSpace(conferenceLink) ? null : conferenceLink.Trim();
+            editingLesson.ResourceLink = string.IsNullOrWhiteSpace(resourceLink) ? null : resourceLink.Trim();
+            CloseEditor();
+            successMessage = "Посилання заняття успішно збережено.";
+        }
+        catch (HttpRequestException) { errorMessage = "Не вдалося зберегти посилання. Повторіть спробу пізніше."; }
+        finally { isSaving = false; }
+    }
+
+    private async Task Logout()
+    {
+        await Authentication.LogoutAsync();
+        Navigation.NavigateTo("/teacher-schedule", replace: true);
+    }
+
+    private TeacherScheduleLessonResponse? GetLesson(DateTime date, int position) => lessons.FirstOrDefault(item => item.LessonDate.Date == date.Date && item.LessonPosition == position);
+
+    private static async Task<string> ReadMessage(HttpResponseMessage response)
+    {
+        var content = await response.Content.ReadAsStringAsync();
+        try { using var json = JsonDocument.Parse(content); if (json.RootElement.TryGetProperty("message", out var value) || json.RootElement.TryGetProperty("Message", out value)) return value.GetString() ?? "Операцію не виконано."; }
+        catch (JsonException) { }
+        return "Операцію не виконано.";
+    }
+
+    private static string GetDayName(DateTime date) => date.DayOfWeek switch
+    {
+        DayOfWeek.Monday => "Понеділок", DayOfWeek.Tuesday => "Вівторок", DayOfWeek.Wednesday => "Середа",
+        DayOfWeek.Thursday => "Четвер", DayOfWeek.Friday => "П’ятниця", DayOfWeek.Saturday => "Субота",
+        DayOfWeek.Sunday => "Неділя", _ => "—"
+    };
+}

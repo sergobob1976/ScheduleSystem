@@ -189,6 +189,30 @@ code {
     text-transform: uppercase;
 }
 
+.teacher-login-wrapper {
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    min-height: calc(100vh - 9rem);
+}
+
+.teacher-login-card {
+    max-width: 480px;
+    width: 100%;
+}
+
+.google-button-mark {
+    background: #fff;
+    border-radius: 50%;
+    color: #4285f4;
+    display: inline-flex;
+    font-weight: 700;
+    height: 1.6rem;
+    justify-content: center;
+    margin-right: .5rem;
+    width: 1.6rem;
+}
+
 @media (max-width: 575.98px) {
     .student-header-title {
         font-size: 1rem;

@@ -1,0 +1,33 @@
+@page "/teacher-schedule"
+@layout TeacherLayout
+
+<PageTitle>Кабінет викладача — Розклад ЧКФКЕП</PageTitle>
+
+<AuthorizeView Roles="Teacher">
+    <Authorized>
+        <TeacherScheduleContent />
+    </Authorized>
+    <NotAuthorized>
+        <div class="teacher-login-wrapper">
+            <div class="card border-0 shadow-lg teacher-login-card">
+                <div class="card-body p-4 p-md-5 text-center">
+                    <h1 class="h3 mb-3">Кабінет викладача</h1>
+                    <p class="text-muted mb-4">Увійдіть корпоративним обліковим записом Google домену college.cv.ua.</p>
+                    @if (GoogleLoginError == "1")
+                    {
+                        <div class="alert alert-danger">Не вдалося виконати вхід. Перевірте корпоративний обліковий запис і наявність вашої пошти в довіднику викладачів.</div>
+                    }
+                    <a class="btn btn-primary btn-lg w-100" href="https://localhost:7085/api/teacher-authentication/google-login">
+                        <span class="google-button-mark" aria-hidden="true">G</span>
+                        Увійти через Google
+                    </a>
+                </div>
+            </div>
+        </div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [SupplyParameterFromQuery(Name = "googleLoginError")]
+    public string? GoogleLoginError { get; set; }
+}

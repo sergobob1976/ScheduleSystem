@@ -11,6 +11,7 @@ using Schedule.Core.Models;
 namespace Schedule.Api.Controllers;
 
 [ApiController]
+[Authorize(Roles = "Administrator,Dispatcher,Teacher")]
 [Route("api/authentication")]
 public class AuthenticationController : ControllerBase
 {

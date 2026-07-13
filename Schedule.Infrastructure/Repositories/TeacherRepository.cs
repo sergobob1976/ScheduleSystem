@@ -36,6 +36,18 @@ public class TeacherRepository : ITeacherRepository
         return await connection.QueryFirstOrDefaultAsync<Teacher>(sql, new { Id = id });
     }
 
+    public async Task<Teacher?> GetByEmailAsync(string email)
+    {
+        using var connection = CreateConnection();
+        const string sql = """
+            SELECT *
+            FROM `Teachers`
+            WHERE LOWER(`Email`) = LOWER(@Email)
+            LIMIT 1;
+            """;
+        return await connection.QueryFirstOrDefaultAsync<Teacher>(sql, new { Email = email });
+    }
+
     public async Task<int> CreateAsync(Teacher teacher)
     {
         using var connection = CreateConnection();
