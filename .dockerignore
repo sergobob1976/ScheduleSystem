@@ -1,0 +1,14 @@
+**/bin/
+**/obj/
+.git/
+.github/
+.vs/
+.codex-build/
+.codex-qa/
+Schedule.Maui/
+deployment/*.env
+!deployment/*.env.example
+*.user
+*.suo
+*.log
+clean_solution.txt
