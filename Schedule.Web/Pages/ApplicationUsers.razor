@@ -25,6 +25,28 @@
     </div>
 }
 
+@if (userToDelete is not null)
+{
+    <div class="card border-danger shadow-sm mb-4">
+        <div class="card-header bg-danger text-white">
+            Видалення диспетчера
+        </div>
+        <div class="card-body">
+            <p class="mb-3">
+                Видалити обліковий запис диспетчера
+                <strong>«@userToDelete.DisplayName»</strong>
+                з логіном <code>@userToDelete.UserName</code>?
+            </p>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-danger" disabled="@isSaving" @onclick="DeleteDispatcher">
+                    @(isSaving ? "Видалення…" : "Видалити диспетчера")
+                </button>
+                <button type="button" class="btn btn-outline-secondary" disabled="@isSaving" @onclick="CloseDeleteConfirmation">Скасувати</button>
+            </div>
+        </div>
+    </div>
+}
+
 @if (isCreating)
 {
     <div class="card border-success shadow-sm mb-4">
@@ -111,7 +133,15 @@
                             <td><code>@user.UserName</code></td>
                             <td>@GetRoleName(user.Role)</td>
                             <td><span class="badge @(user.IsActive ? "bg-success" : "bg-secondary")">@(user.IsActive ? "Активний" : "Вимкнений")</span></td>
-                            <td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditor(user)">Змінити пароль</button></td>
+                            <td class="text-end">
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @onclick="() => OpenEditor(user)">Змінити пароль</button>
+                                    @if (user.Role == "Dispatcher")
+                                    {
+                                        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="() => OpenDeleteConfirmation(user)">Видалити</button>
+                                    }
+                                </div>
+                            </td>
                         </tr>
                     }
                 }
@@ -123,6 +153,7 @@
 @code {
     private List<ApplicationUserSummaryResponse> users = [];
     private ApplicationUserSummaryResponse? selectedUser;
+    private ApplicationUserSummaryResponse? userToDelete;
     private bool isCreating;
     private string newUserName = "";
     private string newUserDisplayName = "";
@@ -155,6 +186,7 @@
     private void OpenEditor(ApplicationUserSummaryResponse user)
     {
         CloseCreator();
+        CloseDeleteConfirmation();
         selectedUser = user;
         newPassword = "";
         passwordConfirmation = "";
@@ -165,6 +197,7 @@
     private void OpenCreator()
     {
         CloseEditor();
+        CloseDeleteConfirmation();
         isCreating = true;
         errorMessage = "";
         successMessage = "";
@@ -177,6 +210,54 @@
         newUserDisplayName = "";
         newUserPassword = "";
         newUserPasswordConfirmation = "";
+    }
+
+    private void OpenDeleteConfirmation(ApplicationUserSummaryResponse user)
+    {
+        if (user.Role != "Dispatcher") return;
+
+        CloseCreator();
+        CloseEditor();
+        userToDelete = user;
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private void CloseDeleteConfirmation()
+    {
+        userToDelete = null;
+    }
+
+    private async Task DeleteDispatcher()
+    {
+        if (userToDelete is null) return;
+
+        isSaving = true;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var response = await Http.DeleteAsync($"api/application-users/{userToDelete.Id}");
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = await ReadMessage(response);
+                return;
+            }
+
+            var deletedId = userToDelete.Id;
+            var displayName = userToDelete.DisplayName;
+            users.RemoveAll(user => user.Id == deletedId);
+            CloseDeleteConfirmation();
+            successMessage = $"Диспетчера «{displayName}» успішно видалено.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося видалити диспетчера. Перевірте з’єднання із сервером.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private async Task CreateDispatcher()

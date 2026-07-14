@@ -8,4 +8,5 @@ public interface IApplicationUserRepository
     Task<ApplicationUser?> GetByUserNameAsync(string userName);
     Task<bool> CreateAsync(ApplicationUser user);
     Task<bool> UpdatePasswordHashAsync(int id, string passwordHash);
+    Task<bool> DeleteDispatcherAsync(int id);
 }

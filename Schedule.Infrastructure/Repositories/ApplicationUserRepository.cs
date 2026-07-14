@@ -75,4 +75,16 @@ public class ApplicationUserRepository : IApplicationUserRepository
         using IDbConnection connection = new MySqlConnection(_connectionString);
         return await connection.ExecuteAsync(sql, new { Id = id, PasswordHash = passwordHash }) > 0;
     }
+
+    public async Task<bool> DeleteDispatcherAsync(int id)
+    {
+        const string sql = """
+            DELETE FROM `ApplicationUsers`
+            WHERE `Id` = @Id
+              AND `Role` = 'Dispatcher';
+            """;
+
+        using IDbConnection connection = new MySqlConnection(_connectionString);
+        return await connection.ExecuteAsync(sql, new { Id = id }) > 0;
+    }
 }

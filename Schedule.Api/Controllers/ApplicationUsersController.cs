@@ -99,6 +99,23 @@ public class ApplicationUsersController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> DeleteDispatcher(int id)
+    {
+        var user = (await _users.GetAllAsync()).FirstOrDefault(item => item.Id == id);
+        if (user is null)
+            return NotFound(new { Message = $"Користувача з ID {id} не знайдено." });
+
+        if (user.Role != "Dispatcher")
+            return BadRequest(new { Message = "Обліковий запис адміністратора видалити не можна." });
+
+        var deleted = await _users.DeleteDispatcherAsync(id);
+        if (!deleted)
+            return NotFound(new { Message = $"Диспетчера з ID {id} не знайдено." });
+
+        return NoContent();
+    }
+
     private static ApplicationUserSummaryResponse ToSummary(ApplicationUser user) => new()
     {
         Id = user.Id,

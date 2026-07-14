@@ -1,5 +1,6 @@
 using System.Text;
 using System.Security.Claims;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
@@ -109,6 +110,29 @@ authentication.AddCookie(options =>
     {
         context.Response.StatusCode = StatusCodes.Status403Forbidden;
         return Task.CompletedTask;
+    };
+    options.Events.OnValidatePrincipal = async context =>
+    {
+        var role = context.Principal?.FindFirstValue(ClaimTypes.Role);
+        if (role is not ("Administrator" or "Dispatcher"))
+            return;
+
+        var userName = context.Principal?.FindFirstValue(ClaimTypes.Name);
+        if (string.IsNullOrWhiteSpace(userName))
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return;
+        }
+
+        var userRepository = context.HttpContext.RequestServices
+            .GetRequiredService<IApplicationUserRepository>();
+        var user = await userRepository.GetByUserNameAsync(userName);
+        if (user is null || !user.IsActive || user.Role != role)
+        {
+            context.RejectPrincipal();
+            await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        }
     };
 });
 
