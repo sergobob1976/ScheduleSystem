@@ -1,5 +1,6 @@
 @page "/teacher-schedule"
 @layout TeacherLayout
+@inject HttpClient Http
 
 <PageTitle>Кабінет викладача — Розклад ЧКФКЕП</PageTitle>
 
@@ -17,7 +18,7 @@
                     {
                         <div class="alert alert-danger">Не вдалося виконати вхід. Перевірте корпоративний обліковий запис і наявність вашої пошти в довіднику викладачів.</div>
                     }
-                    <a class="btn btn-primary btn-lg w-100" href="https://localhost:7085/api/teacher-authentication/google-login">
+                    <a class="btn btn-primary btn-lg w-100" href="@GoogleLoginUrl">
                         <span class="google-button-mark" aria-hidden="true">G</span>
                         Увійти через Google
                     </a>
@@ -34,4 +35,8 @@
 @code {
     [SupplyParameterFromQuery(Name = "googleLoginError")]
     public string? GoogleLoginError { get; set; }
+
+    private string GoogleLoginUrl => new Uri(
+        Http.BaseAddress!,
+        "api/teacher-authentication/google-login").ToString();
 }
