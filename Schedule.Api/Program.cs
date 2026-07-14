@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.WebUtilities;
 using Schedule.Api.Authentication;
 using Schedule.Core.Interfaces;
@@ -24,6 +25,11 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ScheduleWeb", policy =>
     {
+        if (allowedOrigins.Length == 0)
+        {
+            return;
+        }
+
         policy
             .WithOrigins(allowedOrigins)
             .AllowAnyMethod()
@@ -32,19 +38,43 @@ builder.Services.AddCors(options =>
     });
 });
 
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto |
+        ForwardedHeaders.XForwardedHost;
+});
+
 builder.Services.AddControllers();
 var googleClientId = builder.Configuration["Authentication:Google:ClientId"];
 var googleClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
 var googleHostedDomain = builder.Configuration["Authentication:Google:HostedDomain"] ?? "college.cv.ua";
-var webBaseUrl = builder.Configuration["ClientApplications:WebBaseUrl"] ?? "https://localhost:7199";
+var webBaseUrl = builder.Configuration["ClientApplications:WebBaseUrl"];
+var googleConfigurationSpecified =
+    !string.IsNullOrWhiteSpace(googleClientId) ||
+    !string.IsNullOrWhiteSpace(googleClientSecret);
 var googleIsConfigured = !string.IsNullOrWhiteSpace(googleClientId) &&
                          !string.IsNullOrWhiteSpace(googleClientSecret);
+
+if (googleConfigurationSpecified && !googleIsConfigured)
+{
+    throw new InvalidOperationException(
+        "Для Google OAuth потрібно одночасно задати ClientId і ClientSecret.");
+}
+
+if (googleIsConfigured && string.IsNullOrWhiteSpace(webBaseUrl))
+{
+    throw new InvalidOperationException(
+        "Для Google OAuth потрібно задати адресу Web-застосунку " +
+        "ClientApplications__WebBaseUrl.");
+}
 
 builder.Services.AddSingleton(new GoogleAuthenticationSettings
 {
     IsConfigured = googleIsConfigured,
     HostedDomain = googleHostedDomain,
-    WebBaseUrl = webBaseUrl
+    WebBaseUrl = webBaseUrl ?? string.Empty
 });
 
 var authentication = builder.Services
@@ -138,7 +168,7 @@ if (googleIsConfigured)
         options.Events.OnRemoteFailure = context =>
         {
             context.HandleResponse();
-            context.Response.Redirect($"{webBaseUrl.TrimEnd('/')}/teacher-schedule?googleLoginError=1");
+            context.Response.Redirect($"{webBaseUrl!.TrimEnd('/')}/teacher-schedule?googleLoginError=1");
             return Task.CompletedTask;
         };
     });
@@ -258,6 +288,8 @@ using (var scope = app.Services.CreateScope())
         throw;
     }
 }
+
+app.UseForwardedHeaders();
 
 if (!app.Environment.IsDevelopment())
 {
