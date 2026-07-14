@@ -21,14 +21,102 @@
             <circle r="40%" cx="50%" cy="50%" />
         </svg>
         <div class="loading-progress-text"></div>
+        <div class="startup-loading-hint">
+            Перший запуск може тривати трохи довше.
+        </div>
     </div>
+
+    <div id="startup-problem" class="startup-problem" hidden>
+        <div class="startup-problem-card">
+            <h1 id="startup-problem-title">Не вдалося запустити застосунок</h1>
+            <p id="startup-problem-message">
+                Браузер не зміг завантажити компоненти розкладу.
+            </p>
+            <div class="startup-problem-actions">
+                <strong>Що потрібно зробити:</strong>
+                <ol>
+                    <li>Перевірте підключення до інтернету.</li>
+                    <li>Перезавантажте цю сторінку.</li>
+                    <li>Оновіть Chrome, Edge, Firefox або Safari до актуальної версії.</li>
+                    <li>Якщо помилка повторюється, повідомте адміністратора системи.</li>
+                </ol>
+            </div>
+            <button type="button" onclick="window.location.reload()">
+                Перезавантажити сторінку
+            </button>
+        </div>
+    </div>
+
+    <noscript>
+        <style>
+            #app { display: none !important; }
+            #javascript-required { display: flex !important; }
+        </style>
+        <div id="javascript-required" class="startup-problem">
+            <div class="startup-problem-card">
+                <h1>Потрібно увімкнути JavaScript</h1>
+                <p>Без JavaScript розклад не може працювати в браузері.</p>
+                <div class="startup-problem-actions">
+                    <strong>Що потрібно зробити:</strong>
+                    <ol>
+                        <li>Відкрийте налаштування браузера.</li>
+                        <li>Дозвольте JavaScript для цього сайту.</li>
+                        <li>Поверніться на сторінку та перезавантажте її.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </noscript>
 
     <div id="blazor-error-ui">
         Сталася неочікувана помилка.
         <a href="." class="reload">Перезавантажити</a>
         <span class="dismiss">🗙</span>
     </div>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script>
+        (function () {
+            var problem = document.getElementById("startup-problem");
+            var app = document.getElementById("app");
+
+            window.scheduleShowStartupProblem = function (title, message) {
+                document.getElementById("startup-problem-title").textContent = title;
+                document.getElementById("startup-problem-message").textContent = message;
+                problem.hidden = false;
+                problem.style.display = "flex";
+                app.style.display = "none";
+            };
+
+            if (!window.WebAssembly || !window.fetch || !window.Promise || !window.URL) {
+                window.scheduleShowStartupProblem(
+                    "Ваш браузер застарів",
+                    "Ця версія браузера не підтримує технології, необхідні для роботи розкладу. Оновіть браузер або відкрийте сайт в актуальній версії Chrome, Edge, Firefox чи Safari."
+                );
+                return;
+            }
+
+            window.setTimeout(function () {
+                if (app.querySelector && app.querySelector(".loading-progress")) {
+                    window.scheduleShowStartupProblem(
+                        "Застосунок завантажується надто довго",
+                        "Причиною може бути нестабільне з’єднання, заблоковане завантаження файлів або застаріла версія браузера."
+                    );
+                }
+            }, 60000);
+
+            window.addEventListener("unhandledrejection", function () {
+                if (app.querySelector && app.querySelector(".loading-progress")) {
+                    window.scheduleShowStartupProblem(
+                        "Не вдалося завершити запуск",
+                        "Під час завантаження компонентів сталася помилка. Виконайте наведені нижче дії."
+                    );
+                }
+            });
+        })();
+    </script>
+    <script
+        src="_framework/blazor.webassembly#[.{fingerprint}].js"
+        onerror="window.scheduleShowStartupProblem('Не вдалося завантажити застосунок', 'Перевірте підключення до інтернету або налаштування, які можуть блокувати завантаження файлів сайту.')">
+    </script>
 </body>
 
 </html>

@@ -63,6 +63,7 @@
                 @if (reportsExpanded)
                 {
                     <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white menu-child-link" href="reports/day-schedule"><span class="menu-icon">📝</span><span class="menu-label">Розклад на день</span></NavLink></li>
+                    <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white menu-child-link" href="reports/auditorium-fund"><span class="menu-icon">🏫</span><span class="menu-label">Аудиторний фонд</span></NavLink></li>
                     <li class="nav-item mb-2 ms-2"><NavLink class="nav-link text-white menu-child-link" href="reports/teacher-reading"><span class="menu-icon">📋</span><span class="menu-label">Вичитка викладача</span></NavLink></li>
                 }
 
@@ -106,7 +107,7 @@
         var path = Navigation.ToBaseRelativePath(Navigation.Uri).Split('?', '#')[0].Trim('/');
         referencesExpanded = path is "semesters" or "classrooms" or "groups" or "specialties" or "group-specialties" or "disciplines" or "teachers";
         workloadExpanded = path is "group-disciplines" or "teacher-semester-loads" or "teacher-discipline-loads" or "teaching-assignments" or "workload-overview";
-        reportsExpanded = path is "reports/day-schedule" or "reports/teacher-reading";
+        reportsExpanded = path is "reports/day-schedule" or "reports/auditorium-fund" or "reports/teacher-reading";
     }
 }
 

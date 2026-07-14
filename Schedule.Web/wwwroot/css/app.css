@@ -71,9 +71,78 @@
     inset: calc(20vh + 3.25rem) 0 auto 0.2rem;
 }
 
-    .loading-progress-text:after {
+.loading-progress-text:after {
     content: var(--blazor-load-percentage-text, "Завантаження");
     }
+
+.startup-loading-hint {
+    color: #64748b;
+    font-size: .9rem;
+    inset: calc(20vh + 9rem) 1rem auto 1rem;
+    position: absolute;
+    text-align: center;
+}
+
+.startup-problem[hidden] {
+    display: none;
+}
+
+.startup-problem {
+    align-items: center;
+    background: linear-gradient(135deg, #eef5ff 0%, #f3fbf7 100%);
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+}
+
+.startup-problem-card {
+    background: #fff;
+    border: 1px solid #dbe3ec;
+    border-radius: 1rem;
+    box-shadow: 0 .75rem 2rem rgba(15, 23, 42, .12);
+    box-sizing: border-box;
+    color: #1e293b;
+    max-width: 42rem;
+    padding: 2rem;
+    width: 100%;
+}
+
+.startup-problem-card h1 {
+    color: #9f1d1d;
+    font-size: 1.65rem;
+    margin: 0 0 1rem;
+}
+
+.startup-problem-card p {
+    line-height: 1.55;
+    margin: 0 0 1.25rem;
+}
+
+.startup-problem-actions {
+    background: #f8fafc;
+    border-left: .3rem solid #2e7d32;
+    line-height: 1.55;
+    margin-bottom: 1.25rem;
+    padding: 1rem 1rem .75rem;
+}
+
+.startup-problem-actions ol {
+    margin: .6rem 0 0;
+    padding-left: 1.25rem;
+}
+
+.startup-problem-card button {
+    background: #1565c0;
+    border: 0;
+    border-radius: .6rem;
+    color: #fff;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: .75rem 1.1rem;
+}
 
 code {
     color: #c02d76;

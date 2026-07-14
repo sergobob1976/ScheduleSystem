@@ -1,0 +1,314 @@
+@page "/reports/auditorium-fund"
+@using Schedule.Core.DTOs
+@using Schedule.Core.Enums
+@using Schedule.Core.Models
+@inject HttpClient Http
+
+<h1 class="h3 mb-3">Аудиторний фонд</h1>
+<p class="text-muted">
+    Зайнятість аудиторій групами за парами на вибрану дату.
+</p>
+
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label fw-bold">Семестр</label>
+                <select class="form-select" @bind="semesterId" @bind:after="ChangeSemester">
+                    <option value="0">Оберіть семестр</option>
+                    @foreach (var semester in semesters)
+                    {
+                        <option value="@semester.Id">@semester.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Дата</label>
+                <input
+                    type="date"
+                    class="form-control"
+                    min="@SemesterStart"
+                    max="@SemesterEnd"
+                    @bind="scheduleDate"
+                    @bind:format="yyyy-MM-dd"
+                    @bind:after="LoadReport" />
+            </div>
+            <div class="col-md-3">
+                <button
+                    type="button"
+                    class="btn btn-primary w-100"
+                    disabled="@isLoading"
+                    @onclick="LoadReport">
+                    @(isLoading ? "Оновлення…" : "Оновити")
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(errorMessage))
+{
+    <div class="alert alert-danger d-flex justify-content-between align-items-center gap-3">
+        <span>@errorMessage</span>
+        <button type="button" class="btn btn-sm btn-outline-danger" @onclick="ClearError">ОК</button>
+    </div>
+}
+
+@if (isLoading && report is null)
+{
+    <div class="text-center text-muted py-5">
+        <div class="spinner-border text-primary mb-3" role="status"></div>
+        <div>Формування звіту…</div>
+    </div>
+}
+else if (report is not null)
+{
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+        <div>
+            <h2 class="h5 mb-1">Зайнятість аудиторій на @report.ScheduleDate.ToString("dd.MM.yyyy")</h2>
+            <div class="text-muted">@report.DayName · @report.SemesterName</div>
+        </div>
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <div class="small text-muted">Скасовані заняття не враховуються</div>
+            <a class="btn btn-success" href="@DownloadUrl">Завантажити Word (.docx)</a>
+        </div>
+    </div>
+
+    @if (classRooms.Count == 0)
+    {
+        <div class="alert alert-info">У довіднику немає аудиторій.</div>
+    }
+    else
+    {
+        <div class="card shadow-sm auditorium-fund-card">
+            <div class="table-responsive auditorium-fund-scroll">
+                <table class="table table-bordered align-middle text-center mb-0 auditorium-fund-table">
+                    <thead>
+                        <tr>
+                            <th class="auditorium-position-column">Пара</th>
+                            @foreach (var classRoom in classRooms)
+                            {
+                                <th class="auditorium-column">@classRoom.Name</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (var position = 1; position <= 8; position++)
+                        {
+                            var lessonPosition = position;
+                            <tr>
+                                <th class="auditorium-position-column">
+                                    <span class="d-block fw-bold">@lessonPosition</span>
+                                    <span class="small fw-normal text-muted">@GetPositionName(lessonPosition)</span>
+                                </th>
+                                @foreach (var classRoom in classRooms)
+                                {
+                                    var groups = GetGroups(classRoom.Name, lessonPosition);
+                                    <td class="auditorium-occupation-cell @(groups.Count > 0 ? "auditorium-occupied" : "")">
+                                        @if (groups.Count == 0)
+                                        {
+                                            <span class="text-muted">—</span>
+                                        }
+                                        else
+                                        {
+                                            @foreach (var group in groups)
+                                            {
+                                                <span class="auditorium-group">@group</span>
+                                            }
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private List<Semester> semesters = [];
+    private List<ClassRoom> classRooms = [];
+    private int semesterId;
+    private DateTime scheduleDate = DateTime.Today;
+    private DayScheduleReportResponse? report;
+    private bool isLoading;
+    private string errorMessage = string.Empty;
+
+    private Semester? SelectedSemester => semesters.FirstOrDefault(item => item.Id == semesterId);
+    private string SemesterStart => SelectedSemester?.StartDate.ToString("yyyy-MM-dd") ?? string.Empty;
+    private string SemesterEnd => SelectedSemester?.EndDate.ToString("yyyy-MM-dd") ?? string.Empty;
+    private string DownloadUrl => new Uri(
+        Http.BaseAddress!,
+        $"api/DayScheduleReports/semester/{semesterId}/auditorium-fund-docx?scheduleDate={scheduleDate:yyyy-MM-dd}").ToString();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var semestersTask = Http.GetFromJsonAsync<List<Semester>>("api/semesters");
+            var classRoomsTask = Http.GetFromJsonAsync<List<ClassRoom>>("api/classrooms");
+            await Task.WhenAll(semestersTask, classRoomsTask);
+
+            semesters = await semestersTask ?? [];
+            classRooms = (await classRoomsTask ?? [])
+                .OrderBy(item => item.Name, StringComparer.CurrentCultureIgnoreCase)
+                .ToList();
+
+            SelectDefaultSemester();
+            SetDefaultDate();
+            await LoadReport();
+        }
+        catch (Exception)
+        {
+            errorMessage = "Не вдалося завантажити дані для звіту. Перевірте з’єднання із сервером і оновіть сторінку.";
+        }
+    }
+
+    private void SelectDefaultSemester()
+    {
+        var today = DateTime.Today;
+        var semester = semesters.FirstOrDefault(item => item.StartDate.Date <= today && item.EndDate.Date >= today)
+            ?? semesters.Where(item => item.StartDate.Date > today).OrderBy(item => item.StartDate).FirstOrDefault()
+            ?? semesters.OrderByDescending(item => item.EndDate).FirstOrDefault();
+        semesterId = semester?.Id ?? 0;
+    }
+
+    private void SetDefaultDate()
+    {
+        var semester = SelectedSemester;
+        if (semester is null)
+        {
+            scheduleDate = DateTime.Today;
+            return;
+        }
+
+        scheduleDate = DateTime.Today < semester.StartDate.Date
+            ? semester.StartDate.Date
+            : DateTime.Today > semester.EndDate.Date
+                ? semester.EndDate.Date
+                : DateTime.Today;
+    }
+
+    private async Task ChangeSemester()
+    {
+        SetDefaultDate();
+        await LoadReport();
+    }
+
+    private async Task LoadReport()
+    {
+        if (semesterId <= 0)
+        {
+            report = null;
+            errorMessage = "Оберіть семестр.";
+            return;
+        }
+
+        var semester = SelectedSemester;
+        if (semester is not null &&
+            (scheduleDate.Date < semester.StartDate.Date || scheduleDate.Date > semester.EndDate.Date))
+        {
+            report = null;
+            errorMessage = "Обрана дата не належить вибраному семестру.";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = string.Empty;
+        try
+        {
+            report = await Http.GetFromJsonAsync<DayScheduleReportResponse>(
+                $"api/DayScheduleReports/semester/{semesterId}?scheduleDate={scheduleDate:yyyy-MM-dd}");
+        }
+        catch (Exception)
+        {
+            errorMessage = "Не вдалося сформувати звіт. Перевірте дату та з’єднання із сервером.";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private List<string> GetGroups(string classRoomName, int lessonPosition) =>
+        report?.Groups
+            .Where(group => group.Lessons.Any(lesson =>
+                lesson.LessonPosition == lessonPosition &&
+                lesson.Status != RealLessonStatus.Cancelled &&
+                string.Equals(lesson.ClassRoomName, classRoomName, StringComparison.CurrentCultureIgnoreCase)))
+            .Select(group => group.GroupName)
+            .Distinct(StringComparer.CurrentCultureIgnoreCase)
+            .OrderBy(groupName => groupName, StringComparer.CurrentCultureIgnoreCase)
+            .ToList()
+        ?? [];
+
+    private void ClearError() => errorMessage = string.Empty;
+
+    private static string GetPositionName(int position) => position switch
+    {
+        1 => "перша",
+        2 => "друга",
+        3 => "третя",
+        4 => "четверта",
+        5 => "п’ята",
+        6 => "шоста",
+        7 => "сьома",
+        8 => "восьма",
+        _ => string.Empty
+    };
+}
+
+<style>
+    .auditorium-fund-card {
+        border: 0;
+        overflow: hidden;
+    }
+
+    .auditorium-fund-scroll {
+        max-height: calc(100vh - 19rem);
+    }
+
+    .auditorium-fund-table thead th {
+        background: #dbeafe;
+        border-bottom: 3px solid #0d6efd;
+        color: #0a3d78;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+
+    .auditorium-position-column {
+        background: #eef2f6 !important;
+        left: 0;
+        min-width: 6.5rem;
+        position: sticky;
+        width: 6.5rem;
+        z-index: 3 !important;
+    }
+
+    .auditorium-column {
+        min-width: 9rem;
+        white-space: normal;
+    }
+
+    .auditorium-occupation-cell {
+        height: 4.4rem;
+        min-width: 9rem;
+    }
+
+    .auditorium-occupied {
+        background: #edf8f1 !important;
+    }
+
+    .auditorium-group {
+        background: #198754;
+        border-radius: .4rem;
+        color: #fff;
+        display: inline-block;
+        font-weight: 700;
+        margin: .15rem;
+        padding: .35rem .55rem;
+    }
+</style>

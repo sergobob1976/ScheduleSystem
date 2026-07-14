@@ -153,6 +153,7 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddTransient<DatabaseInitializer>();
 builder.Services.AddSingleton<DayScheduleDocxGenerator>();
+builder.Services.AddSingleton<AuditoriumFundDocxGenerator>();
 builder.Services.AddSingleton<TeacherReadingDocxGenerator>();
 builder.Services.AddSingleton<PasswordHashService>();
 

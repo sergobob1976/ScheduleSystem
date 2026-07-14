@@ -15,21 +15,27 @@ public class DayScheduleReportsController : ControllerBase
     private readonly ISemesterRepository _semesterRepository;
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupDisciplineRepository _groupDisciplineRepository;
+    private readonly IClassRoomRepository _classRoomRepository;
     private readonly IRealLessonRepository _realLessonRepository;
     private readonly DayScheduleDocxGenerator _docxGenerator;
+    private readonly AuditoriumFundDocxGenerator _auditoriumFundDocxGenerator;
 
     public DayScheduleReportsController(
         ISemesterRepository semesterRepository,
         IGroupRepository groupRepository,
         IGroupDisciplineRepository groupDisciplineRepository,
+        IClassRoomRepository classRoomRepository,
         IRealLessonRepository realLessonRepository,
-        DayScheduleDocxGenerator docxGenerator)
+        DayScheduleDocxGenerator docxGenerator,
+        AuditoriumFundDocxGenerator auditoriumFundDocxGenerator)
     {
         _semesterRepository = semesterRepository;
         _groupRepository = groupRepository;
         _groupDisciplineRepository = groupDisciplineRepository;
+        _classRoomRepository = classRoomRepository;
         _realLessonRepository = realLessonRepository;
         _docxGenerator = docxGenerator;
+        _auditoriumFundDocxGenerator = auditoriumFundDocxGenerator;
     }
 
     [HttpGet("semester/{semesterId:int}")]
@@ -53,6 +59,24 @@ public class DayScheduleReportsController : ControllerBase
         var content = _docxGenerator.Generate(report);
         var fileName = $"Розклад-на-{scheduleDate:dd-MM-yyyy}.docx";
         return File(content, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", fileName);
+    }
+
+    [HttpGet("semester/{semesterId:int}/auditorium-fund-docx")]
+    public async Task<IActionResult> DownloadAuditoriumFundDocx(
+        int semesterId,
+        [FromQuery] DateTime scheduleDate)
+    {
+        var validation = await ValidateAsync(semesterId, scheduleDate);
+        if (validation.Error is not null) return validation.Error;
+
+        var report = await CreateReportAsync(validation.Semester!, scheduleDate.Date);
+        var classRooms = (await _classRoomRepository.GetAllAsync()).ToList();
+        var content = _auditoriumFundDocxGenerator.Generate(report, classRooms);
+        var fileName = $"Аудиторний-фонд-{scheduleDate:dd-MM-yyyy}.docx";
+        return File(
+            content,
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            fileName);
     }
 
     private async Task<(Schedule.Core.Models.Semester? Semester, ActionResult? Error)> ValidateAsync(

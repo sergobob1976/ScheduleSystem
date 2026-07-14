@@ -30,4 +30,19 @@
         <h2 class="h5">Довідники</h2><p class="text-muted">Семестри, групи, спеціальності, дисципліни, викладачі та аудиторії.</p>
         <a href="semesters" class="btn btn-outline-secondary">Перейти до довідників</a>
     </div></div></div>
+
+    <AuthorizeView Roles="Administrator">
+        <Authorized>
+            <div class="col-lg-6"><div class="card h-100 shadow-sm border-info"><div class="card-body p-4">
+                <span class="badge bg-info text-dark mb-3">Перегляд</span><h2 class="h5">Сторінка студента</h2>
+                <p class="text-muted">Перегляд актуального розкладу так, як його бачать студенти вибраної групи.</p>
+                <a href="student-schedule" class="btn btn-info">Перейти до сторінки студента</a>
+            </div></div></div>
+            <div class="col-lg-6"><div class="card h-100 shadow-sm border-warning"><div class="card-body p-4">
+                <span class="badge bg-warning text-dark mb-3">Перегляд</span><h2 class="h5">Сторінка викладача</h2>
+                <p class="text-muted">Перехід до кабінету викладача для перегляду розкладу та навчальних посилань.</p>
+                <a href="teacher-schedule" class="btn btn-warning">Перейти до сторінки викладача</a>
+            </div></div></div>
+        </Authorized>
+    </AuthorizeView>
 </div>
