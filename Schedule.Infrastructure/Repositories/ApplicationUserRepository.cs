@@ -51,6 +51,19 @@ public class ApplicationUserRepository : IApplicationUserRepository
         return await connection.QuerySingleOrDefaultAsync<ApplicationUser>(sql, new { UserName = userName });
     }
 
+    public async Task<bool> CreateAsync(ApplicationUser user)
+    {
+        const string sql = """
+            INSERT INTO `ApplicationUsers`
+                (`UserName`, `DisplayName`, `PasswordHash`, `Role`, `IsActive`)
+            VALUES
+                (@UserName, @DisplayName, @PasswordHash, @Role, @IsActive);
+            """;
+
+        using IDbConnection connection = new MySqlConnection(_connectionString);
+        return await connection.ExecuteAsync(sql, user) > 0;
+    }
+
     public async Task<bool> UpdatePasswordHashAsync(int id, string passwordHash)
     {
         const string sql = """

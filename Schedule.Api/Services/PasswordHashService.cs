@@ -6,6 +6,19 @@ public class PasswordHashService
 {
     private const int Iterations = 210_000;
 
+    public string? Validate(string password)
+    {
+        if (string.IsNullOrEmpty(password))
+            return "Пароль не може бути порожнім.";
+        if (password.Length < 12)
+            return "Пароль повинен містити щонайменше 12 символів.";
+        if (password.Length > 128)
+            return "Пароль не може містити більше 128 символів.";
+        if (!password.Any(char.IsLetter) || !password.Any(char.IsDigit))
+            return "Пароль повинен містити хоча б одну літеру та одну цифру.";
+        return null;
+    }
+
     public string Hash(string password)
     {
         var salt = RandomNumberGenerator.GetBytes(16);

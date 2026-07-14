@@ -156,6 +156,7 @@ builder.Services.AddSingleton<DayScheduleDocxGenerator>();
 builder.Services.AddSingleton<AuditoriumFundDocxGenerator>();
 builder.Services.AddSingleton<TeacherReadingDocxGenerator>();
 builder.Services.AddSingleton<PasswordHashService>();
+builder.Services.AddTransient<InitialAdminBootstrapper>();
 
 builder.Services.AddScoped<
     IGroupRepository,
@@ -231,11 +232,21 @@ using (var scope = app.Services.CreateScope())
             scope.ServiceProvider
                 .GetRequiredService<DatabaseInitializer>();
 
-        initializer.Initialize();
+        var seedTestData = builder.Configuration
+            .GetValue<bool>("Database:SeedTestData");
+
+        initializer.Initialize(seedTestData);
+
+        if (!seedTestData)
+        {
+            var adminBootstrapper = scope.ServiceProvider
+                .GetRequiredService<InitialAdminBootstrapper>();
+            await adminBootstrapper.EnsureCreatedAsync();
+        }
 
         app.Logger.LogInformation(
-            "Базу даних успішно ініціалізовано, " +
-            "таблиці створено.");
+            "Базу даних успішно ініціалізовано. Тестові дані: {SeedTestData}.",
+            seedTestData ? "увімкнено" : "вимкнено");
     }
     catch (Exception ex)
     {

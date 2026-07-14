@@ -35,7 +35,7 @@ public class ApplicationUsersController : ControllerBase
         int id,
         ChangeUserPasswordRequest request)
     {
-        var validationMessage = ValidatePassword(request.NewPassword);
+        var validationMessage = _passwords.Validate(request.NewPassword);
         if (validationMessage is not null)
             return BadRequest(new { Message = validationMessage });
 
@@ -48,19 +48,6 @@ public class ApplicationUsersController : ControllerBase
             return NotFound(new { Message = $"Користувача з ID {id} не знайдено." });
 
         return NoContent();
-    }
-
-    private static string? ValidatePassword(string password)
-    {
-        if (string.IsNullOrEmpty(password))
-            return "Новий пароль не може бути порожнім.";
-        if (password.Length < 12)
-            return "Пароль повинен містити щонайменше 12 символів.";
-        if (password.Length > 128)
-            return "Пароль не може містити більше 128 символів.";
-        if (!password.Any(char.IsLetter) || !password.Any(char.IsDigit))
-            return "Пароль повинен містити хоча б одну літеру та одну цифру.";
-        return null;
     }
 
     private static ApplicationUserSummaryResponse ToSummary(ApplicationUser user) => new()

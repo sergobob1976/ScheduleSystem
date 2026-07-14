@@ -19,7 +19,7 @@ public class DatabaseInitializer
                 "Рядок підключення не знайдено.");
     }
 
-    public void Initialize()
+    public void Initialize(bool seedTestData)
     {
         using IDbConnection connection =
             new MySqlConnection(_connectionString);
@@ -28,7 +28,10 @@ public class DatabaseInitializer
 
         CreateTables(connection);
         UpdateExistingTables(connection);
-        DatabaseSeeder.Seed(connection);
+        if (seedTestData)
+        {
+            DatabaseSeeder.Seed(connection);
+        }
     }
 
     private static void CreateTables(
