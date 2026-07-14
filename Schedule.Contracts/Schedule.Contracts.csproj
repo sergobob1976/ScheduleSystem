@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Multi-target so MAUI Windows build can resolve the assembly for Windows TFM as well -->
-    <TargetFrameworks>net10.0;net10.0-windows10.0.17763.0</TargetFrameworks>
+    <TargetFrameworks>net10.0</TargetFrameworks>
+    <!-- MAUI Windows requires the Windows TFM, while Linux production builds must not restore it. -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">net10.0;net10.0-windows10.0.17763.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
