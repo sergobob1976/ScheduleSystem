@@ -5,7 +5,13 @@
 @inject HttpClient Http
 
 <h1 class="h3 mb-3">Користувачі</h1>
-<p class="text-muted">Зміна паролів адміністратора та диспетчерів.</p>
+<p class="text-muted">Створення облікових записів диспетчерів і зміна паролів користувачів.</p>
+
+<div class="mb-3">
+    <button type="button" class="btn btn-success" @onclick="OpenCreator">
+        Додати диспетчера
+    </button>
+</div>
 
 @if (!string.IsNullOrWhiteSpace(errorMessage))
 {
@@ -16,6 +22,43 @@
     <div class="alert alert-success d-flex justify-content-between align-items-center gap-3">
         <span>@successMessage</span>
         <button type="button" class="btn btn-sm btn-success" @onclick="() => successMessage = string.Empty">ОК</button>
+    </div>
+}
+
+@if (isCreating)
+{
+    <div class="card border-success shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            Новий диспетчер
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Ім’я користувача</label>
+                    <InputText class="form-control" autocomplete="name" @bind-Value="newUserDisplayName" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Логін</label>
+                    <InputText class="form-control" autocomplete="username" @bind-Value="newUserName" />
+                    <div class="form-text">Від 3 до 50 латинських літер, цифр або символів . _ -</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Пароль</label>
+                    <InputText class="form-control" type="password" autocomplete="new-password" @bind-Value="newUserPassword" />
+                    <div class="form-text">Щонайменше 12 символів, одна літера та одна цифра.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Підтвердження пароля</label>
+                    <InputText class="form-control" type="password" autocomplete="new-password" @bind-Value="newUserPasswordConfirmation" />
+                </div>
+                <div class="col-12 d-flex gap-2">
+                    <button type="button" class="btn btn-success" disabled="@isSaving" @onclick="CreateDispatcher">
+                        @(isSaving ? "Створення…" : "Створити диспетчера")
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" disabled="@isSaving" @onclick="CloseCreator">Скасувати</button>
+                </div>
+            </div>
+        </div>
     </div>
 }
 
@@ -80,6 +123,11 @@
 @code {
     private List<ApplicationUserSummaryResponse> users = [];
     private ApplicationUserSummaryResponse? selectedUser;
+    private bool isCreating;
+    private string newUserName = "";
+    private string newUserDisplayName = "";
+    private string newUserPassword = "";
+    private string newUserPasswordConfirmation = "";
     private string newPassword = "";
     private string passwordConfirmation = "";
     private string errorMessage = "";
@@ -106,11 +154,98 @@
 
     private void OpenEditor(ApplicationUserSummaryResponse user)
     {
+        CloseCreator();
         selectedUser = user;
         newPassword = "";
         passwordConfirmation = "";
         errorMessage = "";
         successMessage = "";
+    }
+
+    private void OpenCreator()
+    {
+        CloseEditor();
+        isCreating = true;
+        errorMessage = "";
+        successMessage = "";
+    }
+
+    private void CloseCreator()
+    {
+        isCreating = false;
+        newUserName = "";
+        newUserDisplayName = "";
+        newUserPassword = "";
+        newUserPasswordConfirmation = "";
+    }
+
+    private async Task CreateDispatcher()
+    {
+        if (newUserDisplayName.Trim().Length < 2)
+        {
+            errorMessage = "Вкажіть ім’я диспетчера.";
+            return;
+        }
+        if (newUserName.Trim().Length < 3)
+        {
+            errorMessage = "Логін повинен містити щонайменше 3 символи.";
+            return;
+        }
+        if (newUserPassword.Length < 12 ||
+            !newUserPassword.Any(char.IsLetter) ||
+            !newUserPassword.Any(char.IsDigit))
+        {
+            errorMessage = "Пароль повинен містити щонайменше 12 символів, одну літеру та одну цифру.";
+            return;
+        }
+        if (newUserPassword != newUserPasswordConfirmation)
+        {
+            errorMessage = "Пароль і підтвердження не збігаються.";
+            return;
+        }
+
+        isSaving = true;
+        errorMessage = "";
+        successMessage = "";
+        try
+        {
+            var response = await Http.PostAsJsonAsync(
+                "api/application-users",
+                new CreateDispatcherRequest
+                {
+                    UserName = newUserName.Trim(),
+                    DisplayName = newUserDisplayName.Trim(),
+                    Password = newUserPassword
+                });
+
+            if (!response.IsSuccessStatusCode)
+            {
+                errorMessage = await ReadMessage(response);
+                return;
+            }
+
+            var createdUser = await response.Content.ReadFromJsonAsync<ApplicationUserSummaryResponse>();
+            if (createdUser is not null)
+            {
+                users.Add(createdUser);
+                users = users
+                    .OrderBy(user => user.Role == "Administrator" ? 0 : 1)
+                    .ThenBy(user => user.DisplayName)
+                    .ToList();
+            }
+
+            var displayName = newUserDisplayName.Trim();
+            CloseCreator();
+            successMessage = $"Диспетчера «{displayName}» успішно створено.";
+        }
+        catch (HttpRequestException)
+        {
+            errorMessage = "Не вдалося створити диспетчера. Перевірте з’єднання із сервером.";
+        }
+        finally
+        {
+            isSaving = false;
+        }
     }
 
     private void CloseEditor()

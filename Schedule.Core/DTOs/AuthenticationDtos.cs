@@ -23,6 +23,13 @@ public class ApplicationUserSummaryResponse
     public bool IsActive { get; set; }
 }
 
+public class CreateDispatcherRequest
+{
+    public string UserName { get; set; } = "";
+    public string DisplayName { get; set; } = "";
+    public string Password { get; set; } = "";
+}
+
 public class ChangeUserPasswordRequest
 {
     public string NewPassword { get; set; } = "";

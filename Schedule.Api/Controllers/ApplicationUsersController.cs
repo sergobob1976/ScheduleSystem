@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.RegularExpressions;
 using Schedule.Api.Services;
 using Schedule.Core.DTOs;
 using Schedule.Core.Interfaces;
@@ -12,6 +13,10 @@ namespace Schedule.Api.Controllers;
 [Route("api/application-users")]
 public class ApplicationUsersController : ControllerBase
 {
+    private static readonly Regex UserNamePattern = new(
+        "^[A-Za-z0-9._-]+$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private readonly IApplicationUserRepository _users;
     private readonly PasswordHashService _passwords;
 
@@ -28,6 +33,50 @@ public class ApplicationUsersController : ControllerBase
     {
         var users = await _users.GetAllAsync();
         return Ok(users.Select(ToSummary));
+    }
+
+    [HttpPost]
+    public async Task<ActionResult<ApplicationUserSummaryResponse>> CreateDispatcher(
+        CreateDispatcherRequest request)
+    {
+        var userName = request.UserName.Trim();
+        var displayName = request.DisplayName.Trim();
+
+        if (userName.Length is < 3 or > 50 || !UserNamePattern.IsMatch(userName))
+        {
+            return BadRequest(new
+            {
+                Message = "Логін повинен містити від 3 до 50 латинських літер, цифр або символів . _ -"
+            });
+        }
+
+        if (displayName.Length is < 2 or > 100)
+            return BadRequest(new { Message = "Ім’я користувача повинно містити від 2 до 100 символів." });
+
+        var validationMessage = _passwords.Validate(request.Password);
+        if (validationMessage is not null)
+            return BadRequest(new { Message = validationMessage });
+
+        if (await _users.GetByUserNameAsync(userName) is not null)
+            return Conflict(new { Message = $"Користувач із логіном «{userName}» уже існує." });
+
+        var created = await _users.CreateAsync(new ApplicationUser
+        {
+            UserName = userName,
+            DisplayName = displayName,
+            PasswordHash = _passwords.Hash(request.Password),
+            Role = "Dispatcher",
+            IsActive = true
+        });
+
+        if (!created)
+            return StatusCode(500, new { Message = "Не вдалося створити диспетчера." });
+
+        var user = await _users.GetByUserNameAsync(userName);
+        if (user is null)
+            return StatusCode(500, new { Message = "Диспетчера створено, але не вдалося завантажити його дані." });
+
+        return StatusCode(StatusCodes.Status201Created, ToSummary(user));
     }
 
     [HttpPatch("{id:int}/password")]
